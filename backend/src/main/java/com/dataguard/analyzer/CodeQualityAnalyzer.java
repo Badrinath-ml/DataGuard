@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 @Component
 public class CodeQualityAnalyzer {
     private static final Pattern PRINTLN = Pattern.compile("^\\s*System\\.out\\.println\\s*\\((.*)\\)\\s*;\\s*$");
-    private static final Pattern EMPTY_CATCH = Pattern.compile("^\\s*catch\\s*\\([^)]*\\)\\s*\\{\\s*}\\s*$");
+    private static final Pattern EMPTY_CATCH = Pattern.compile("^\\s*catch\\s*\\([^)]*\\s+[A-Za-z_$][A-Za-z0-9_$]*\\s*\\)\\s*\\{\\s*}\\s*$");
     private static final Set<String> IGNORED_DIRS = Set.of(
             ".git", "node_modules", "target", "build", "dist", ".next", "vendor", "__pycache__");
 
