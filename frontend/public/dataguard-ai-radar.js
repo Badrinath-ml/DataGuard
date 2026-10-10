@@ -163,8 +163,8 @@ function renderWorkflow(data){
 }
 function looksLikeProductName(value){
  const name=String(value||'').trim();if(name.length<2||name.length>48)return false;
- if(/\b(vs\.?|versus|compare|comparison|length\s*(?:&|and)\s*style|human[- ]like presenters|automation\s*(?:&|and|vs\.?|versus)\s*manual control|pricing comparison|top tools|best tools)\b/i.test(name))return false;
- if(/^(purpose|features?|pros? and cons?|workflow|step \d+|tools?|recommended tools|conclusion|summary)$/i.test(name))return false;
+ if(/\b(vs\.?|versus|compare|comparison|length\s*(?:&|and)\s*style|human[- ]like presenters|automation\s*(?:&|and|vs\.?|versus)\s*manual control|project management software|document editors?|whiteboarding tools?|pricing comparison|top tools|best tools|tool categories)\b/i.test(name))return false;
+ if(/^(purpose|features?|pros? and cons?|workflow|step \d+|tools?|recommended tools|conclusion|summary|research)$/i.test(name))return false;
  return true
 }
 function fallback(reply,mode){
