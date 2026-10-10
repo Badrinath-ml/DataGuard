@@ -18,6 +18,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -179,10 +183,58 @@ public class AIChatController {
                         .append(". Recommendation: ").append(safe(finding.getRecommendation())).append("\n");
             }
             if (findings.isEmpty()) system.append("No stored findings. Do not invent any.\n");
+            appendUploadedSource(system, review, findings);
         } else {
             system.append("\nNo project has been attached to this scan yet. Do not assume a file was uploaded.\n");
         }
         return system.toString();
+    }
+
+    private void appendUploadedSource(StringBuilder system, Review review, List<Finding> findings) {
+        Path root = Path.of(System.getProperty("java.io.tmpdir"),
+                "dataguard_" + review.getProject().getId()).toAbsolutePath().normalize();
+        if (!Files.isDirectory(root)) {
+            system.append("\\nUploaded source files are no longer present on this server. Do not claim to have inspected full source.\\n");
+            return;
+        }
+        try (var walk = Files.walk(root)) {
+            List<Path> files = walk.filter(Files::isRegularFile)
+                    .map(path -> path.toAbsolutePath().normalize())
+                    .filter(path -> path.startsWith(root))
+                    .filter(path -> path.toString().matches("(?i).*\\\\.(java|js|jsx|ts|tsx|py|html|css|json|ya?ml|xml|md|sql)$"))
+                    .filter(path -> {
+                        try { return Files.size(path) <= 100_000; }
+                        catch (IOException exception) { return false; }
+                    })
+                    .limit(250).toList();
+            system.append("\\nUPLOADED PROJECT FILES (selected text files only; use these as evidence):\\n");
+            files.stream().limit(80).forEach(path ->
+                    system.append("- ").append(root.relativize(path).toString().replace((char)92, '/')).append("\\n"));
+            List<Path> selected = new ArrayList<>();
+            for (Finding finding : findings) {
+                if (finding.getFilePath() == null) continue;
+                files.stream().filter(path -> path.getFileName().toString().equals(finding.getFilePath()))
+                        .filter(path -> !selected.contains(path)).findFirst().ifPresent(selected::add);
+                if (selected.size() >= 4) break;
+            }
+            for (Path path : files) {
+                if (selected.size() >= 4) break;
+                if (!selected.contains(path)) selected.add(path);
+            }
+            int budget = 18_000;
+            for (Path path : selected) {
+                if (budget <= 0) break;
+                String source = Files.readString(path, StandardCharsets.UTF_8);
+                int limit = Math.min(Math.min(source.length(), 5_000), budget);
+                system.append("\\n--- FILE: ").append(root.relativize(path).toString().replace((char)92, '/')).append(" ---\\n")
+                        .append(source, 0, limit);
+                if (limit < source.length()) system.append("\\n[File excerpt truncated.]");
+                system.append("\\n");
+                budget -= limit;
+            }
+        } catch (IOException exception) {
+            system.append("\\nUploaded source context could not be read. Use only the stored findings as evidence.\\n");
+        }
     }
 
     private User currentUser(Authentication authentication) {
