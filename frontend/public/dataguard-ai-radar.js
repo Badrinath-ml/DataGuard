@@ -75,11 +75,67 @@ function toolGrid(out,items,title){
  out.append(grid);
  if(budget().includes('free only')&&!items.some(t=>pricing(t).kind==='FREE_ONLY'))out.append(el('p','No tools were confidently identified as completely free, so the closest matches are shown. Verify plans before signing up.','d18-summary'))
 }
-function renderTools(data){
- const out=$('#out');out.replaceChildren();
- const tools=collectTools(data,'find');
- const visible=visibleTools(tools);
- toolGrid(out,visible,'AI RADAR RESULTS · '+visible.length+' OF '+tools.length+' TOOLS')
+function findPricing(tool){
+ const kind=String(tool.pricingType||'').toUpperCase().replace(/[\s-]+/g,'_'),details=String(tool.pricingDetails||'');
+ let hasFree=tool.hasFreePlan;
+ if(hasFree===null){
+  if(kind==='FREE_ONLY'||kind==='FREE_WITH_LIMITS'||kind==='FREEMIUM'||kind.includes('FREE_TIER'))hasFree=true;
+  else if(kind==='PAID_SUBSCRIPTION'||kind==='PAID_USAGE'||kind==='FREE_TRIAL_THEN_PAID')hasFree=false;
+  else if(/\bfree plan\b|\bfree tier\b|\bfreemium\b|\bfree with limits\b|\blimited free\b/i.test(details))hasFree=true;
+  else if(/\bpaid only\b|\bno free plan\b|\bsubscription required\b/i.test(details))hasFree=false;
+ }
+ let status='unknown',label='Pricing varies',plans=false;
+ if(hasFree===true){status='free';label='Free';plans=kind!=='FREE_ONLY'&&(kind==='FREEMIUM'||kind==='FREE_WITH_LIMITS'||/\bpaid plans?\b|\bplans available\b|\bupgrade\b|\bpremium\b/i.test(details))}
+ else if(kind==='FREE_TRIAL_THEN_PAID'){status='trial';label='Free trial';plans=true}
+ else if(hasFree===false||kind.startsWith('PAID_')){status='paid';label='Paid'}
+ else if(kind==='FREE_ONLY'){status='free';label='Free'}
+ return{status:status,label:label,plans:plans,hasFree:hasFree,monthly:tool.monthlyPriceUsd,details:details};
+}
+function findMatchesBudget(tool){
+ const selected=budget(),price=findPricing(tool);
+ if(selected.includes('free only'))return price.hasFree===true;
+ if(selected.includes('under $20'))return price.hasFree===true||(typeof price.monthly==='number'&&price.monthly>=0&&price.monthly<20);
+ return true;
+}
+const brandDomains={'capcut':'capcut.com','davinci resolve':'blackmagicdesign.com','blackmagic design':'blackmagicdesign.com','adobe premiere pro':'adobe.com','premiere pro':'adobe.com','adobe photoshop':'adobe.com','canva':'canva.com','gimp':'gimp.org','final cut pro':'apple.com','descript':'descript.com','audacity':'audacityteam.org','shotcut':'shotcut.org','clipchamp':'clipchamp.com','veed':'veed.io','grammarly':'grammarly.com','chatgpt':'chatgpt.com','github copilot':'github.com','runway':'runwayml.com','invideo':'invideo.io','filmora':'filmora.wondershare.com','obs studio':'obsproject.com','kdenlive':'kdenlive.org','figma':'figma.com','notion':'notion.so','openai':'openai.com','gemini':'gemini.google.com','claude':'claude.ai','vegas pro':'vegascreativesoftware.com'};
+function domainForTool(tool){
+ const name=tool.name.toLowerCase().trim();
+ for(const key of Object.keys(brandDomains))if(name===key||name.startsWith(key+' '))return brandDomains[key];
+ try{const u=new URL(tool.url);if(u.protocol==='https:'||u.protocol==='http:')return u.hostname.replace(/^www\./,'')}catch(_){}
+ return '';
+}
+function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'AI'}
+function createBrandLogo(tool,domain){
+ const wrap=document.createElement('span');wrap.className='d18-brand-logo';wrap.textContent=initials(tool.name);
+ if(domain){const img=document.createElement('img');img.alt=tool.name+' logo';img.loading='lazy';img.referrerPolicy='no-referrer';img.src='https://www.google.com/s2/favicons?domain='+encodeURIComponent(domain)+'&sz=128';img.addEventListener('load',()=>{if(img.naturalWidth>0)wrap.replaceChildren(img)});img.addEventListener('error',()=>img.remove(),{once:true})}
+ return wrap;
+}
+function makeFindCard(tool){
+ const price=findPricing(tool),domain=domainForTool(tool),card=el('article',null,'d18-find-card');card.dataset.status=price.status;
+ const main=el('div',null,'d18-find-main'),title=el('div',null,'d18-find-title');title.append(createBrandLogo(tool,domain),el('h3',tool.name));main.append(title,el('p',tool.purpose,'d18-find-description'));
+ if(tool.bestFor)main.append(el('p','Best for: '+tool.bestFor,'d18-find-best'));
+ card.append(main);
+ const footer=el('div',null,'d18-find-footer'),tags=el('div',null,'d18-find-tags'),status=el('span',price.label,'d18-find-tag');status.dataset.kind=price.status;tags.append(status);
+ if(price.plans){const plans=el('span','Plans available','d18-find-tag');plans.dataset.kind='plans';tags.append(plans)}
+ footer.append(tags);
+ const officialUrl=/^https?:\/\//i.test(tool.url)?tool.url:(domain?'https://'+domain:'');
+ if(officialUrl){const link=el('a','Visit site ↗','d18-visit');link.href=officialUrl;link.target='_blank';link.rel='noopener noreferrer';footer.append(link)}
+ card.append(footer);
+ if(typeof price.monthly==='number'&&price.monthly>0)card.append(el('div','Starting price: USD '+price.monthly.toFixed(2).replace(/\.00$/,'')+' per month','d18-find-price-note'));
+ else if(price.details&&!/verify current plan|verify current pricing/i.test(price.details))card.append(el('div',price.details,'d18-find-price-note'));
+ return card;
+}
+function renderTools(data,resetPage=false){
+ const out=document.querySelector('#out');if(resetPage)findVisibleCount=9;out.replaceChildren();
+ const all=collectTools(data,'find'),filtered=all.filter(findMatchesBudget);
+ out.append(el('h3','Recommended AI tools','d18-find-heading'));
+ if(!filtered.length){
+  const selected=budget();
+  const msg=selected.includes('free only')?'No tools with a confirmed free plan matched this request. Choose Any price to see all recommendations.':selected.includes('under $20')?'No tools with a confirmed free plan or a known monthly price under 20 USD matched this request. Choose Any price to see all recommendations.':'No relevant tools were returned. Try a more specific request.';
+  out.append(el('div',msg,'d18-find-empty'));return;
+ }
+ const shown=filtered.slice(0,findVisibleCount),grid=el('div',null,'d18-find-grid');shown.forEach(tool=>grid.append(makeFindCard(tool)));out.append(grid);
+ if(filtered.length>9){const wrap=el('div',null,'d18-more-wrap'),more=shown.length<filtered.length,button=el('button',more?'View more tools ('+(filtered.length-shown.length)+' more)':'Show fewer tools','d18-more-button');button.type='button';button.dataset.radarMore=more?'more':'less';wrap.append(button);out.append(wrap)}
 }
 function renderWorkflow(data){
  const out=$('#out');out.replaceChildren();
