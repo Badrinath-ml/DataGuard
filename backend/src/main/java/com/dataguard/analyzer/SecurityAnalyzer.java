@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 @Component
 public class SecurityAnalyzer {
     private static final Pattern CREDENTIAL = Pattern.compile(
-            "(?i)\\b(api[_-]?key|client[_-]?secret|access[_-]?token|auth[_-]?token|password|passwd|secret)\\b\\s*[:=]\\s*[\"']?([A-Za-z0-9_./+=-]{8,})");
+            "(?i)\\b(api[_-]?key|client[_-]?secret|access[_-]?token|auth[_-]?token|password|passwd|secret)\\b[\"']?\\s*[:=]\\s*[\"']?([A-Za-z0-9_./+=-]{8,})");
     private static final Pattern COMMAND_EXEC = Pattern.compile(
             "(?:Runtime\\.getRuntime\\(\\)\\.exec|child_process\\.exec|\\bexec\\s*\\()");
 
