@@ -239,7 +239,8 @@ public class ProjectController {
             int score = 100;
             for (Finding item : all) {
                 if ("RESOLVED".equalsIgnoreCase(item.getStatus())) continue;
-                if ("HIGH".equalsIgnoreCase(item.getSeverity()) || "CRITICAL".equalsIgnoreCase(item.getSeverity())) score -= 10;
+                if ("CRITICAL".equalsIgnoreCase(item.getSeverity())) score -= 15;
+                else if ("HIGH".equalsIgnoreCase(item.getSeverity())) score -= 10;
                 else if ("MEDIUM".equalsIgnoreCase(item.getSeverity())) score -= 5;
                 else score -= 2;
             }
