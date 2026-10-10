@@ -22,7 +22,7 @@ public class AIConversationSession {
     @JoinColumn(name = "review_id")
     private Review review;
 
-    @Column(nullable = false, length = 24)
+    @Column(nullable = false, length = 24, columnDefinition = "varchar(24) not null default 'CODE_CHECK'")
     private String contextType = "CODE_CHECK";
 
     @Column(nullable = false, length = 180)
