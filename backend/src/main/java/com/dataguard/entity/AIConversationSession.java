@@ -22,9 +22,6 @@ public class AIConversationSession {
     @JoinColumn(name = "review_id")
     private Review review;
 
-    @Column(nullable = false, length = 24, columnDefinition = "varchar(24) not null default 'CODE_CHECK'")
-    private String contextType = "CODE_CHECK";
-
     @Column(nullable = false, length = 180)
     private String title = "New scan";
 
@@ -36,11 +33,9 @@ public class AIConversationSession {
     public User getUser() { return user; }
     public Review getReview() { return review; }
     public String getTitle() { return title; }
-    public String getContextType() { return contextType; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUser(User user) { this.user = user; }
     public void setReview(Review review) { this.review = review; }
     public void setTitle(String title) { this.title = title; }
-    public void setContextType(String contextType) { this.contextType = contextType; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }
