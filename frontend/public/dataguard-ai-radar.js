@@ -58,7 +58,7 @@ function collectTools(data,mode){
   arr=[];data.steps.forEach(step=>{if(Array.isArray(step.tools))arr.push(...step.tools);if(step.tool)arr.push(...String(step.tool).split(/[,;]\\s*/))})
  }
  const seen=new Set();
- return arr.map(x=>normTool(x,data.category)).filter(t=>t.name&&t.name.trim()).filter(t=>{
+ return arr.map(x=>normTool(x,data.category)).filter(t=>t.name&&t.name.trim()&&looksLikeProductName(t.name)).filter(t=>{
   const k=t.name.trim().toLowerCase();if(seen.has(k))return false;seen.add(k);return true
  }).slice(0,mode==='workflow'?15:24)
 }
@@ -161,14 +161,22 @@ function renderWorkflow(data){
  out.append(map);toolGrid(out,collectTools(data,'workflow'),'Recommended AI tools for this workflow');
  const redraw=()=>drawWorkflowEdges(map);if(typeof requestAnimationFrame==='function')requestAnimationFrame(redraw);else redraw();if(!map.dataset.resizeBound){map.dataset.resizeBound='1';window.addEventListener('resize',redraw,{passive:true})}
 }
+function looksLikeProductName(value){
+ const name=String(value||'').trim();if(name.length<2||name.length>48)return false;
+ if(/\b(vs\.?|versus|compare|comparison|length\s*(?:&|and)\s*style|human[- ]like presenters|automation\s*(?:&|and|vs\.?|versus)\s*manual control|pricing comparison|top tools|best tools)\b/i.test(name))return false;
+ if(/^(purpose|features?|pros? and cons?|workflow|step \d+|tools?|recommended tools|conclusion|summary)$/i.test(name))return false;
+ return true
+}
 function fallback(reply,mode){
  const raw=String(reply||'').trim();if(!raw)return null;
  if(mode==='workflow'){
-  const steps=raw.split(/\r?\n/).map(x=>x.trim()).filter(x=>/^(\d+[\).]|step\s+\d+|[-*•])\s*/i.test(x)).slice(0,10).map((x,i)=>({title:'Step '+(i+1),action:x.replace(/^(\d+[\).]|step\s+\d+|[-*•])\s*/i,''),tools:[]}));
-  return steps.length?{title:'Your step-by-step workflow',summary:'The provider response was converted into readable steps.',steps:steps,recommendedTools:[]}:null
+  const lines=raw.split(/\r?\n/).map(x=>plainText(x)).filter(Boolean);
+  const candidates=lines.filter(x=>/^(\d+[\).]|step\s+\d+|[-*•])\s*/i.test(x)).map(x=>x.replace(/^(\d+[\).]|step\s+\d+|[-*•])\s*/i,'').trim()).filter(x=>x.length>=12&&!/^[-—–_*]+$/.test(x));
+  const steps=candidates.slice(0,8).map((action,i)=>{const m=action.match(/^([^:.!?]{4,55})[:.!?]?\s+(.*)$/);const split=m&&m[2]&&m[1].split(/\s+/).length<=7;return{title:split?m[1].trim():'Step '+(i+1),action:split?m[2].trim():action,tools:[]}});
+  return steps.length?{title:'Your connected workflow',summary:'A structured workflow was recovered from the provider response. Review each step before proceeding.',steps:steps,recommendedTools:[]}:null
  }
  const tools=[],seen=new Set();
- raw.split(/\r?\n/).forEach(line=>{const x=line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/,'').replace(/\*\*/g,'').trim(),m=x.match(/^([^:|—–-]{2,60})\s*(?::|—|–|-|\|)\s*(.{8,})$/);if(!m||seen.has(m[1].toLowerCase()))return;seen.add(m[1].toLowerCase());tools.push({name:m[1].trim(),purpose:m[2].trim(),pricingDetails:'Verify current plan/pricing.',category:'Recommended tool'})});
+ raw.split(/\r?\n/).forEach(line=>{const x=plainText(line),m=x.match(/^([^:|—–-]{2,60})\s*(?::|—|–|-|\|)\s*(.{8,})$/);if(!m||seen.has(m[1].toLowerCase())||!looksLikeProductName(m[1]))return;seen.add(m[1].toLowerCase());tools.push({name:m[1].trim(),purpose:m[2].trim(),pricingDetails:'Verify current plan/pricing.',category:'Recommended tool'})});
  return tools.length?{tools:tools}:null
 }
 async function run(mode,prompt,sessionId){
