@@ -202,7 +202,7 @@ public class AIChatController {
                     .map(path -> path.toAbsolutePath().normalize())
                     .filter(path -> path.startsWith(root))
                     .filter(path -> path.toString().matches("(?i).*\\\\.(java|js|jsx|ts|tsx|py|html|css|json|ya?ml|xml|md|sql)$"))
-                    .filter(path -> !path.getFileName().toString().matches("(?i).*(secret|credential|private|id_rsa|\.env|password|token|service-account).*"))
+                    .filter(path -> !path.getFileName().toString().matches("(?i).*(secret|credential|private|id_rsa|\\.env|password|token|service-account).*"))
                     .filter(path -> {
                         try { return Files.size(path) <= 100_000; }
                         catch (IOException exception) { return false; }
