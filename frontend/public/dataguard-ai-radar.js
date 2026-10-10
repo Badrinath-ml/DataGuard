@@ -70,23 +70,12 @@ function visibleTools(arr){
 }
 function toolGrid(out,items,title){
  out.append(el('h3',title||('AI RADAR RESULTS · '+items.length+' TOOLS'),'d18-heading'));
- const list=visibleTools(items);
- if(!list.length){out.append(el('div','The AI provider returned no usable tools. Try a more specific goal.','d18-error'));return}
- const grid=el('div',null,'d18-tools-grid');
- list.forEach(t=>{
-  const card=el('article',null,'d18-tool'),head=el('div',null,'d18-tool-head');
-  head.append(el('div','✦','d18-tool-icon'),el('h3',t.name));card.append(head);
-  if(t.category)card.append(el('span',t.category,'tg'));
-  card.append(el('p',t.purpose));
-  if(t.bestFor)card.append(el('p','Best for: '+t.bestFor));
-  if(t.howToUse)card.append(el('p','How to use it: '+t.howToUse));
-  const p=pricing(t),badge=el('span',p.label,'d18-price');badge.dataset.kind=p.kind;card.append(badge);
-  if(p.details)card.append(el('p',p.details));
-  if(/^https?:\/\//i.test(t.url)){const a=el('a','Official website ↗','d18-link');a.href=t.url;a.target='_blank';a.rel='noopener noreferrer';card.append(a)}
-  grid.append(card)
- });
- out.append(grid);
- if(budget().includes('free only')&&!items.some(t=>pricing(t).kind==='FREE_ONLY'))out.append(el('p','No tools were confidently identified as completely free, so the closest matches are shown. Verify plans before signing up.','d18-summary'))
+ out.append(el('p','Each card represents one real AI tool, with its logo, description, pricing, and official website when available.','d18-workflow-tools-intro'));
+ const list=items.filter(findMatchesBudget);
+ if(!list.length){const selected=budget();const msg=selected.includes('free only')?'No workflow tools with a confirmed free plan were returned. Choose Any price to see all recommended tools.':'The AI response did not include a usable list of named products. Retry the workflow; if it repeats, check the backend AI provider response.';out.append(el('div',msg,'d18-find-empty'));return}
+ const grid=el('div',null,'d18-find-grid');
+ list.forEach(t=>grid.append(makeFindCard(t)));
+ out.append(grid)
 }
 function findPricing(tool){
  const kind=String(tool.pricingType||'').toUpperCase().replace(/[\s-]+/g,'_'),details=String(tool.pricingDetails||'');
