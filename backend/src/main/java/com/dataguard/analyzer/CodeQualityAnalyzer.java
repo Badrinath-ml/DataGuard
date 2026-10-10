@@ -6,61 +6,65 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class CodeQualityAnalyzer {
+    private static final Pattern PRINTLN = Pattern.compile("^\\s*System\\.out\\.println\\s*\\((.*)\\)\\s*;\\s*$");
+    private static final Pattern EMPTY_CATCH = Pattern.compile("^\\s*catch\\s*\\([^)]*\\)\\s*\\{\\s*}\\s*$");
+    private static final Set<String> IGNORED_DIRS = Set.of(
+            ".git", "node_modules", "target", "build", "dist", ".next", "vendor", "__pycache__");
 
     public List<Finding> analyze(File projectDir, Review review) {
         List<Finding> findings = new ArrayList<>();
-        analyzeDirectory(projectDir, review, findings);
+        analyzeDirectory(projectDir, projectDir, review, findings);
         return findings;
     }
 
-    private void analyzeDirectory(File dir, Review review, List<Finding> findings) {
+    private void analyzeDirectory(File root, File dir, Review review, List<Finding> findings) {
         File[] files = dir.listFiles();
         if (files == null) return;
-
         for (File file : files) {
             if (file.isDirectory()) {
-                // Optimizer rule: skip node_modules, target, etc.
-                String name = file.getName();
-                if (name.equals("node_modules") || name.equals("target") || name.equals(".git") || name.equals("build")) {
-                    continue;
-                }
-                analyzeDirectory(file, review, findings);
+                if (!IGNORED_DIRS.contains(file.getName())) analyzeDirectory(root, file, review, findings);
             } else if (file.getName().endsWith(".java")) {
-                analyzeFile(file, review, findings);
+                analyzeFile(root, file, review, findings);
             }
         }
     }
 
-    private void analyzeFile(File file, Review review, List<Finding> findings) {
+    private void analyzeFile(File root, File file, Review review, List<Finding> findings) {
         try {
-            List<String> lines = Files.readAllLines(file.toPath());
+            List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+            String relative = root.toPath().toAbsolutePath().normalize()
+                    .relativize(file.toPath().toAbsolutePath().normalize()).toString().replace(File.separatorChar, '/');
             for (int i = 0; i < lines.size(); i++) {
-                String line = lines.get(i).trim();
-
-                // Rule 1: System.out.println
-                if (line.contains("System.out.println")) {
-                    findings.add(createFinding(review, "CODE_QUALITY", "LOW", "System.out.println used", 
-                            file.getName(), i + 1, line, "Use a proper logging framework like SLF4J instead of standard output."));
+                String sourceLine = lines.get(i);
+                Matcher println = PRINTLN.matcher(sourceLine);
+                if (println.matches()) {
+                    findings.add(createFinding(review, "CODE_QUALITY", "LOW", "System.out.println used",
+                            relative, i + 1, sourceLine.trim(),
+                            "Replace standard output with structured logging, or remove the diagnostic print if it is no longer needed."));
                 }
-                
-                // Rule 2: Empty catch block
-                if (line.contains("catch") && line.contains("{") && line.contains("}")) {
-                    findings.add(createFinding(review, "CODE_QUALITY", "HIGH", "Empty catch block", 
-                            file.getName(), i + 1, line, "Never swallow exceptions silently. Log the error or handle it appropriately."));
+                if (EMPTY_CATCH.matcher(sourceLine).matches()) {
+                    findings.add(createFinding(review, "CODE_QUALITY", "HIGH", "Empty catch block",
+                            relative, i + 1, sourceLine.trim(),
+                            "Handle the exception explicitly. Log it or throw a meaningful exception rather than silently swallowing the failure."));
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace(); // Simple logging for academic project
+        } catch (IOException ignored) {
+            // Skip unreadable files without failing the entire project review.
         }
     }
 
-    private Finding createFinding(Review review, String category, String severity, String title, String filePath, int line, String evidence, String recommendation) {
+    private Finding createFinding(Review review, String category, String severity, String title,
+                                  String filePath, int line, String evidence, String recommendation) {
         Finding finding = new Finding();
         finding.setReview(review);
         finding.setCategory(category);
