@@ -77,7 +77,8 @@ function toolGrid(out,items,title){
 function renderTools(data){
  const out=$('#out');out.replaceChildren();
  const tools=collectTools(data,'find');
- toolGrid(out,tools,'AI RADAR RESULTS · '+tools.length+' OF '+tools.length+' TOOLS')
+ const visible=visibleTools(tools);
+ toolGrid(out,visible,'AI RADAR RESULTS · '+visible.length+' OF '+tools.length+' TOOLS')
 }
 function renderWorkflow(data){
  const out=$('#out');out.replaceChildren();
