@@ -270,7 +270,7 @@ public class AIChatController {
 
     private String safe(String value) {
         if (value == null) return "";
-        return value.replace("\\r", " ").replace("\\n", " ").trim();
+        return value.replace("\r", " ").replace("\n", " ").trim();
     }
 
     private void saveMessage(AIConversationSession session, String role, String content) {
