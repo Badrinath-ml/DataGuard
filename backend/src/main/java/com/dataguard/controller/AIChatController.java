@@ -268,6 +268,11 @@ public class AIChatController {
         return cleaned.length() > 180 ? cleaned.substring(0, 180) : cleaned;
     }
 
+    private String safe(String value) {
+        if (value == null) return "";
+        return value.replace("\\r", " ").replace("\\n", " ").trim();
+    }
+
     private void saveMessage(AIConversationSession session, String role, String content) {
         AIConversationMessage message = new AIConversationMessage();
         message.setSession(session);
