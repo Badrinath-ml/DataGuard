@@ -175,7 +175,7 @@ public class AIChatController {
                     .append("\nQuality score: ").append(review.getQualityScore()).append("/100\nFindings:\n");
             List<Finding> findings = findingRepository.findByReviewId(review.getId());
             for (Finding finding : findings.stream().limit(40).toList()) {
-                system.append("- [").append(safe(finding.getSeverity())).append("] ")
+                system.append("- [").append(safe(finding.getSeverity())).append("] [status: ").append(safe(finding.getStatus())).append("] ")
                         .append(safe(finding.getTitle())).append(" in ")
                         .append(safe(finding.getFilePath())).append(":")
                         .append(finding.getLineNumber() == null ? "?" : finding.getLineNumber())
