@@ -46,7 +46,7 @@ function collectTools(data,mode){
   arr=[];data.steps.forEach(s=>{if(Array.isArray(s.tools))arr.push(...s.tools);if(s.tool)arr.push(...String(s.tool).split(/[,;]\s*/))})
  }
  const seen=new Set();
- return arr.map(x=>normTool(x,data.category)).filter(t=>{const k=t.name.trim().toLowerCase();if(!k||seen.has(k))return false;seen.add(k);return true}).slice(0,mode==='workflow'?15:24)
+ return arr.map(x=>normTool(x,data.category)).filter(t=>mode==='workflow'||/^https?:\/\//i.test(t.url)||Boolean(domainForTool(t))).filter(t=>{const k=t.name.trim().toLowerCase();if(!k||seen.has(k))return false;seen.add(k);return true}).slice(0,mode==='workflow'?15:24)
 }
 function budget(){const b=$('.opts .ch[data-g="b"].on');return b?b.textContent.trim().toLowerCase():'any price'}
 function visibleTools(arr){
@@ -97,7 +97,7 @@ function findPricing(tool){
   status='free';label='Free';
  }
  const monthly=tool.monthlyPriceUsd;
- return{status,label,plans,hasFree,monthly,details:details||'Verify current plan and pricing on the official website.'};
+ return{status,label,plans,hasFree,monthly,details};
 }
 function findMatchesBudget(tool){
  const selected=budget();
@@ -147,8 +147,9 @@ function makeFindCard(tool){
  const freeTag=el('span',price.label,'d18-find-tag');freeTag.dataset.kind=price.status;tags.append(freeTag);
  if(price.plans){const plansTag=el('span','Plans available','d18-find-tag');plansTag.dataset.kind='plans';tags.append(plansTag)}
  footer.append(tags);
- if(/^https?:\/\//i.test(tool.url)){
-  const link=el('a','Visit site ↗','d18-visit');link.href=tool.url;link.target='_blank';link.rel='noopener noreferrer';footer.append(link)
+ const officialUrl=/^https?:\/\//i.test(tool.url)?tool.url:(domain?'https://'+domain:'');
+ if(officialUrl){
+  const link=el('a','Visit site ↗','d18-visit');link.href=officialUrl;link.target='_blank';link.rel='noopener noreferrer';footer.append(link)
  }else footer.append(el('span','Official link unavailable','d18-visit'));
  card.append(footer);
  if(price.details||typeof price.monthly==='number'){
