@@ -4,16 +4,23 @@ import com.dataguard.service.RadarChatProvider;
 import com.dataguard.service.RadarChatProvider.Turn;
 import com.dataguard.entity.AIConversationMessage;
 import com.dataguard.entity.AIConversationSession;
+import com.dataguard.entity.Finding;
+import com.dataguard.entity.Review;
 import com.dataguard.entity.User;
 import com.dataguard.repository.AIConversationMessageRepository;
 import com.dataguard.repository.AIConversationSessionRepository;
+import com.dataguard.repository.FindingRepository;
+import com.dataguard.repository.ReviewRepository;
 import com.dataguard.repository.UserRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -26,18 +33,73 @@ public class AIChatController {
     private final UserRepository userRepository;
     private final AIConversationSessionRepository sessionRepository;
     private final AIConversationMessageRepository messageRepository;
+    private final ReviewRepository reviewRepository;
+    private final FindingRepository findingRepository;
 
     public AIChatController(RadarChatProvider provider, UserRepository userRepository,
                             AIConversationSessionRepository sessionRepository,
-                            AIConversationMessageRepository messageRepository) {
+                            AIConversationMessageRepository messageRepository,
+                            ReviewRepository reviewRepository, FindingRepository findingRepository) {
         this.provider = provider;
         this.userRepository = userRepository;
         this.sessionRepository = sessionRepository;
         this.messageRepository = messageRepository;
+        this.reviewRepository = reviewRepository;
+        this.findingRepository = findingRepository;
     }
 
     public record ChatRequest(String message, UUID sessionId) {}
+    public record SessionRequest(String title, Long reviewId) {}
     public record RadarRequest(String prompt, String mode, String category) {}
+
+    @PostMapping("/chat/sessions")
+    public ResponseEntity<?> createSession(@RequestBody(required = false) SessionRequest request,
+                                           Authentication authentication) {
+        User user = currentUser(authentication);
+        AIConversationSession session = new AIConversationSession();
+        session.setUser(user);
+        session.setTitle(cleanTitle(request == null ? null : request.title()));
+        if (request != null && request.reviewId() != null) {
+            Review review = ownedReview(request.reviewId(), user);
+            if (review == null) return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "You do not have access to that review."));
+            session.setReview(review);
+            if (request.title() == null || request.title().isBlank()) session.setTitle(review.getProject().getName());
+        }
+        session.setUpdatedAt(Instant.now());
+        return ResponseEntity.status(HttpStatus.CREATED).body(sessionDto(sessionRepository.save(session)));
+    }
+
+    @GetMapping("/chat/sessions")
+    public ResponseEntity<?> sessions(Authentication authentication) {
+        User user = currentUser(authentication);
+        List<Map<String, Object>> items = sessionRepository.findByUserOrderByUpdatedAtDesc(user)
+                .stream().map(this::sessionDto).toList();
+        return ResponseEntity.ok(items);
+    }
+
+    @PutMapping("/chat/sessions/{sessionId}")
+    public ResponseEntity<?> updateSession(@PathVariable UUID sessionId,
+                                           @RequestBody SessionRequest request,
+                                           Authentication authentication) {
+        User user = currentUser(authentication);
+        AIConversationSession session = sessionRepository.findBySessionIdAndUser(sessionId, user).orElse(null);
+        if (session == null) return ResponseEntity.notFound().build();
+        if (request != null && request.title() != null && !request.title().isBlank()) {
+            session.setTitle(cleanTitle(request.title()));
+        }
+        if (request != null && request.reviewId() != null) {
+            Review review = ownedReview(request.reviewId(), user);
+            if (review == null) return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "You do not have access to that review."));
+            session.setReview(review);
+            if (request.title() == null || request.title().isBlank()) {
+                session.setTitle(cleanTitle(review.getProject().getName()));
+            }
+        }
+        session.setUpdatedAt(Instant.now());
+        return ResponseEntity.ok(sessionDto(sessionRepository.save(session)));
+    }
 
     @PostMapping("/chat")
     public ResponseEntity<?> chat(@RequestBody ChatRequest request, Authentication authentication) {
@@ -49,22 +111,25 @@ public class AIChatController {
                     .body(Map.of("message", "AI is not configured on the server. Set GROQ_API_KEY in the backend environment."));
         }
         try {
-            User user = userRepository.findByEmail(authentication.getName())
-                    .orElseThrow(() -> new IllegalStateException("Authenticated user was not found."));
-            AIConversationSession conversation = request.sessionId() == null
-                    ? sessionRepository.findFirstByUserOrderByUpdatedAtDesc(user).orElseGet(() -> newSession(user))
-                    : sessionRepository.findBySessionIdAndUser(request.sessionId(), user)
-                    .orElseThrow(() -> new IllegalArgumentException("Conversation session was not found."));
+            User user = currentUser(authentication);
+            if (request.sessionId() == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Choose a scan session before sending a message."));
+            }
+            AIConversationSession conversation = sessionRepository.findBySessionIdAndUser(request.sessionId(), user)
+                    .orElse(null);
+            if (conversation == null) return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "This scan session was not found for your account."));
+
             List<Turn> turns = new ArrayList<>();
-            turns.add(new Turn("system", "You are DataGuard AI, a careful software code review assistant. Use the conversation history to answer follow-up questions in context. Do not claim to have run code or applied fixes. Explain uncertainty and advise users to review suggested code."));
+            turns.add(new Turn("system", buildSystemContext(conversation)));
             messageRepository.findTop20BySessionOrderByCreatedAtDesc(conversation).stream()
-                    .sorted(java.util.Comparator.comparing(AIConversationMessage::getCreatedAt))
+                    .sorted(Comparator.comparing(AIConversationMessage::getCreatedAt))
                     .forEach(message -> turns.add(new Turn(message.getRole(), message.getContent())));
             turns.add(new Turn("user", request.message().trim()));
             String reply = provider.complete(turns);
             saveMessage(conversation, "user", request.message().trim());
             saveMessage(conversation, "assistant", reply);
-            conversation.setUpdatedAt(java.time.Instant.now());
+            conversation.setUpdatedAt(Instant.now());
             sessionRepository.save(conversation);
             return ResponseEntity.ok(Map.of("reply", reply, "sessionId", conversation.getSessionId()));
         } catch (Exception exception) {
@@ -74,20 +139,80 @@ public class AIChatController {
     }
 
     @GetMapping("/chat/history")
-    public ResponseEntity<?> history(Authentication authentication) {
-        User user = userRepository.findByEmail(authentication.getName()).orElseThrow();
-        AIConversationSession conversation = sessionRepository.findFirstByUserOrderByUpdatedAtDesc(user).orElse(null);
-        if (conversation == null) return ResponseEntity.ok(Map.of("sessionId", "", "messages", List.of()));
+    public ResponseEntity<?> history(@RequestParam(required = false) UUID sessionId,
+                                     Authentication authentication) {
+        User user = currentUser(authentication);
+        if (sessionId == null) return ResponseEntity.ok(Map.of("sessionId", "", "messages", List.of()));
+        AIConversationSession conversation = sessionRepository.findBySessionIdAndUser(sessionId, user).orElse(null);
+        if (conversation == null) return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("message", "This scan session was not found for your account."));
         List<Map<String, String>> messages = messageRepository.findBySessionOrderByCreatedAtAsc(conversation).stream()
                 .map(message -> Map.of("role", message.getRole(), "content", message.getContent()))
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(Map.of("sessionId", conversation.getSessionId(), "messages", messages));
+        Map<String, Object> result = new HashMap<>();
+        result.put("sessionId", conversation.getSessionId());
+        result.put("title", conversation.getTitle());
+        result.put("reviewId", conversation.getReview() == null ? null : conversation.getReview().getId());
+        result.put("messages", messages);
+        return ResponseEntity.ok(result);
     }
 
-    private AIConversationSession newSession(User user) {
-        AIConversationSession session = new AIConversationSession();
-        session.setUser(user);
-        return sessionRepository.save(session);
+    private String buildSystemContext(AIConversationSession conversation) {
+        StringBuilder system = new StringBuilder("""
+                You are DataGuard AI, a careful software code review assistant.
+                Only use the current scan's context and this conversation. Never claim to have run code or applied a fix unless the backend explicitly confirms it.
+                Explain uncertainty. When suggesting changes, provide a clear patch or code snippet and ask the user to review it.
+                Do not imply that you know other scan sessions unless the user supplies their content in this conversation.
+                """);
+        Review review = conversation.getReview();
+        if (review != null) {
+            system.append("\nCURRENT SCAN CONTEXT\nProject: ").append(safe(review.getProject().getName()))
+                    .append("\nReview ID: ").append(review.getId())
+                    .append("\nQuality score: ").append(review.getQualityScore()).append("/100\nFindings:\n");
+            List<Finding> findings = findingRepository.findByReviewId(review.getId());
+            for (Finding finding : findings.stream().limit(40).toList()) {
+                system.append("- [").append(safe(finding.getSeverity())).append("] ")
+                        .append(safe(finding.getTitle())).append(" in ")
+                        .append(safe(finding.getFilePath())).append(":")
+                        .append(finding.getLineNumber() == null ? "?" : finding.getLineNumber())
+                        .append(". Evidence: ").append(safe(finding.getEvidence()))
+                        .append(". Recommendation: ").append(safe(finding.getRecommendation())).append("\n");
+            }
+            if (findings.isEmpty()) system.append("No stored findings. Do not invent any.\n");
+        } else {
+            system.append("\nNo project has been attached to this scan yet. Do not assume a file was uploaded.\n");
+        }
+        return system.toString();
+    }
+
+    private User currentUser(Authentication authentication) {
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new IllegalStateException("Authenticated user was not found."));
+    }
+
+    private Review ownedReview(Long reviewId, User user) {
+        return reviewRepository.findById(reviewId)
+                .filter(review -> review.getProject() != null && review.getProject().getUser() != null
+                        && review.getProject().getUser().getId().equals(user.getId()))
+                .orElse(null);
+    }
+
+    private Map<String, Object> sessionDto(AIConversationSession session) {
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("sessionId", session.getSessionId());
+        dto.put("title", session.getTitle());
+        dto.put("updatedAt", session.getUpdatedAt());
+        dto.put("reviewId", session.getReview() == null ? null : session.getReview().getId());
+        dto.put("projectName", session.getReview() == null ? null : session.getReview().getProject().getName());
+        dto.put("qualityScore", session.getReview() == null ? null : session.getReview().getQualityScore());
+        dto.put("findingCount", session.getReview() == null ? 0 : findingRepository.findByReviewId(session.getReview().getId()).size());
+        return dto;
+    }
+
+    private String cleanTitle(String title) {
+        if (title == null || title.isBlank()) return "New scan";
+        String cleaned = title.replaceAll("[\\r\\n\\t]", " ").trim();
+        return cleaned.length() > 180 ? cleaned.substring(0, 180) : cleaned;
     }
 
     private void saveMessage(AIConversationSession session, String role, String content) {
