@@ -181,19 +181,27 @@ public class ProjectController {
         if (!Files.isDirectory(root)) {
             return ResponseEntity.status(410).body(Map.of("message", "The uploaded project files are no longer available. Upload the ZIP again."));
         }
-        try (var paths = Files.walk(root)) {
-            List<Path> matches = paths.filter(Files::isRegularFile)
-                    .filter(path -> path.getFileName().toString().equals(finding.getFilePath()))
-                    .map(path -> path.toAbsolutePath().normalize())
-                    .filter(path -> path.startsWith(root))
-                    .toList();
-            if (matches.isEmpty()) {
-                return ResponseEntity.status(404).body(Map.of("message", "The source file for this finding was not found in the uploaded project."));
+        try {
+            // New findings store a root-relative path, which safely handles duplicate filenames.
+            // Historical reviews stored only the basename; keep a guarded fallback for those rows.
+            Path source = root.resolve(finding.getFilePath()).normalize();
+            if (!source.startsWith(root) || !Files.isRegularFile(source)) {
+                String basename = Path.of(finding.getFilePath()).getFileName().toString();
+                try (var paths = Files.walk(root)) {
+                    List<Path> matches = paths.filter(Files::isRegularFile)
+                            .map(path -> path.toAbsolutePath().normalize())
+                            .filter(path -> path.startsWith(root))
+                            .filter(path -> path.getFileName().toString().equals(basename))
+                            .toList();
+                    if (matches.isEmpty()) {
+                        return ResponseEntity.status(404).body(Map.of("message", "The source file for this finding was not found in the uploaded project."));
+                    }
+                    if (matches.size() > 1) {
+                        return ResponseEntity.unprocessableEntity().body(Map.of("message", "More than one file has this name. This finding needs a manual fix to avoid changing the wrong file."));
+                    }
+                    source = matches.get(0);
+                }
             }
-            if (matches.size() > 1) {
-                return ResponseEntity.unprocessableEntity().body(Map.of("message", "More than one file has this name. This finding needs a manual fix to avoid changing the wrong file."));
-            }
-            Path source = matches.get(0);
             List<String> lines = Files.readAllLines(source, StandardCharsets.UTF_8);
             int index = finding.getLineNumber() == null ? -1 : finding.getLineNumber() - 1;
             if (index < 0 || index >= lines.size()) {
