@@ -37,3 +37,6 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: npm run build
+      - name: Check AI Radar browser script syntax
+        working-directory: frontend
+        run: node --check public/dataguard-ai-radar.js

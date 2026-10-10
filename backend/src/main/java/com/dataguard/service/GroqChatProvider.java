@@ -43,6 +43,15 @@ public class GroqChatProvider implements RadarChatProvider {
 
     @Override
     public String complete(List<Turn> turns) {
+        return completeInternal(turns, false);
+    }
+
+    @Override
+    public String completeJson(List<Turn> turns) {
+        return completeInternal(turns, true);
+    }
+
+    private String completeInternal(List<Turn> turns, boolean jsonMode) {
         if (turns == null || turns.isEmpty()) {
             throw new IllegalArgumentException("At least one chat message is required.");
         }
@@ -53,7 +62,7 @@ public class GroqChatProvider implements RadarChatProvider {
         RuntimeException groqFailure = null;
         if (!groqApiKey.isBlank()) {
             try {
-                return completeWithGroq(messages);
+                return completeWithGroq(messages, jsonMode);
             } catch (RuntimeException ex) {
                 groqFailure = ex;
             }
@@ -61,7 +70,7 @@ public class GroqChatProvider implements RadarChatProvider {
 
         if (!geminiApiKey.isBlank()) {
             try {
-                return completeWithGemini(turns);
+                return completeWithGemini(turns, jsonMode);
             } catch (RuntimeException geminiFailure) {
                 if (groqFailure != null) geminiFailure.addSuppressed(groqFailure);
                 throw new IllegalStateException("Both AI providers failed. Check Groq/Gemini quota, key, model, and backend logs.", geminiFailure);
@@ -74,12 +83,17 @@ public class GroqChatProvider implements RadarChatProvider {
         throw new IllegalStateException("No AI provider is configured. Set GROQ_API_KEY and/or GEMINI_API_KEY in the backend environment.");
     }
 
-    private String completeWithGroq(List<Map<String, String>> messages) {
+    private String completeWithGroq(List<Map<String, String>> messages, boolean jsonMode) {
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("model", groqModel);
+        body.put("messages", messages);
+        body.put("temperature", 0.2);
+        if (jsonMode) body.put("response_format", Map.of("type", "json_object"));
         JsonNode response = groqClient.post()
                 .uri("/chat/completions")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + groqApiKey)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("model", groqModel, "messages", messages, "temperature", 0.2))
+                .body(body)
                 .retrieve()
                 .body(JsonNode.class);
         JsonNode content = response == null ? null : response.path("choices").path(0).path("message").path("content");
@@ -89,7 +103,7 @@ public class GroqChatProvider implements RadarChatProvider {
         return content.asText();
     }
 
-    private String completeWithGemini(List<Turn> turns) {
+    private String completeWithGemini(List<Turn> turns, boolean jsonMode) {
         List<Map<String, Object>> contents = new ArrayList<>();
         String systemInstruction = null;
         for (Turn turn : turns) {
@@ -105,7 +119,10 @@ public class GroqChatProvider implements RadarChatProvider {
         }
         Map<String, Object> body = new java.util.HashMap<>();
         body.put("contents", contents);
-        body.put("generationConfig", Map.of("temperature", 0.2));
+        Map<String, Object> generationConfig = new java.util.HashMap<>();
+        generationConfig.put("temperature", 0.2);
+        if (jsonMode) generationConfig.put("responseMimeType", "application/json");
+        body.put("generationConfig", generationConfig);
         if (systemInstruction != null && !systemInstruction.isBlank()) {
             body.put("systemInstruction", Map.of("parts", List.of(Map.of("text", systemInstruction))));
         }

@@ -7,5 +7,9 @@ public interface RadarChatProvider {
 
     String complete(List<Turn> turns);
 
+    default String completeJson(List<Turn> turns) {
+        return complete(turns);
+    }
+
     boolean isConfigured();
 }
