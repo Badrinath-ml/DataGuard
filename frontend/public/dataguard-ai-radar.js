@@ -106,8 +106,8 @@ function domainForTool(tool){
 }
 function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'AI'}
 function createBrandLogo(tool,domain){
- const wrap=document.createElement('span');wrap.className='d18-brand-logo';wrap.textContent=initials(tool.name);
- if(domain){const img=document.createElement('img');img.alt=tool.name+' logo';img.loading='lazy';img.referrerPolicy='no-referrer';img.src='https://www.google.com/s2/favicons?domain='+encodeURIComponent(domain)+'&sz=128';img.addEventListener('load',()=>{if(img.naturalWidth>0)wrap.replaceChildren(img)});img.addEventListener('error',()=>img.remove(),{once:true})}
+ const wrap=document.createElement('span');wrap.className='d18-brand-logo';const fallback=initials(tool.name);wrap.textContent=fallback;
+ if(domain){const img=document.createElement('img');img.alt=tool.name+' logo';img.loading='lazy';img.referrerPolicy='no-referrer';img.src='https://www.google.com/s2/favicons?domain='+encodeURIComponent(domain)+'&sz=128';img.addEventListener('load',()=>{if(img.naturalWidth>0)wrap.replaceChildren(img)});img.addEventListener('error',()=>{wrap.textContent=fallback},{once:true})}
  return wrap;
 }
 function makeFindCard(tool){
