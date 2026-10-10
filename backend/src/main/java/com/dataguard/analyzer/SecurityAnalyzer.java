@@ -70,15 +70,15 @@ public class SecurityAnalyzer {
                             "Remove the literal credential, rotate it if it was committed, and load it from a server-side environment variable or secret manager.");
                 }
                 if (COMMAND_EXEC.matcher(line).find()) {
-                    add(review, findings, "MEDIUM", "Command execution call", relative, i + 1, line.trim(),
+                    add(review, findings, "MEDIUM", "Command execution call", relative, i + 1, "Command/process execution API referenced on this line.",
                             "Avoid passing untrusted input to shell or process execution. Prefer a fixed executable with a validated argument list.");
                 }
                 if (line.contains("dangerouslySetInnerHTML")) {
-                    add(review, findings, "MEDIUM", "Raw HTML insertion", relative, i + 1, line.trim(),
+                    add(review, findings, "MEDIUM", "Raw HTML insertion", relative, i + 1, "Raw HTML insertion API referenced on this line.",
                             "Avoid inserting untrusted HTML. Sanitize it with a maintained sanitizer or render text through the framework's normal escaping.");
                 }
                 if (line.matches(".*(?i)(verify\\s*=\\s*False|rejectUnauthorized\\s*:\\s*false).*")) {
-                    add(review, findings, "MEDIUM", "TLS certificate verification disabled", relative, i + 1, line.trim(),
+                    add(review, findings, "MEDIUM", "TLS certificate verification disabled", relative, i + 1, "TLS certificate verification is explicitly disabled on this line.",
                             "Enable TLS certificate verification; do not disable it in production requests.");
                 }
             }
