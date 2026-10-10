@@ -23,6 +23,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -151,6 +156,96 @@ public class ProjectController {
 
         return ResponseEntity.ok(new FixResponse(
                 finding.getId(), description, finding.getEvidence(), suggestedCode, false));
+    }
+
+    @PostMapping("/reviews/{reviewId}/findings/{findingId}/apply")
+    public ResponseEntity<?> applySafeFix(
+            @PathVariable Long reviewId,
+            @PathVariable Long findingId,
+            Authentication authentication) {
+        Finding finding = findingRepository.findById(findingId).orElse(null);
+        if (finding == null || finding.getReview() == null
+                || !finding.getReview().getId().equals(reviewId)) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!finding.getReview().getProject().getUser().getEmail()
+                .equalsIgnoreCase(authenticationEmail(authentication))) {
+            return ResponseEntity.status(403).body(Map.of("message", "You do not have access to this finding."));
+        }
+        if ("RESOLVED".equalsIgnoreCase(finding.getStatus())) {
+            return ResponseEntity.ok(Map.of("message", "This finding is already marked resolved.", "status", "RESOLVED"));
+        }
+
+        Path root = Path.of(System.getProperty("java.io.tmpdir"),
+                "dataguard_" + finding.getReview().getProject().getId()).toAbsolutePath().normalize();
+        if (!Files.isDirectory(root)) {
+            return ResponseEntity.status(410).body(Map.of("message", "The uploaded project files are no longer available. Upload the ZIP again."));
+        }
+        try (var paths = Files.walk(root)) {
+            List<Path> matches = paths.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().equals(finding.getFilePath()))
+                    .map(path -> path.toAbsolutePath().normalize())
+                    .filter(path -> path.startsWith(root))
+                    .toList();
+            if (matches.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("message", "The source file for this finding was not found in the uploaded project."));
+            }
+            if (matches.size() > 1) {
+                return ResponseEntity.unprocessableEntity().body(Map.of("message", "More than one file has this name. This finding needs a manual fix to avoid changing the wrong file."));
+            }
+            Path source = matches.get(0);
+            List<String> lines = Files.readAllLines(source, StandardCharsets.UTF_8);
+            int index = finding.getLineNumber() == null ? -1 : finding.getLineNumber() - 1;
+            if (index < 0 || index >= lines.size()) {
+                return ResponseEntity.unprocessableEntity().body(Map.of("message", "The finding line no longer matches the uploaded source. Review the code manually."));
+            }
+            String original = lines.get(index);
+            String updated = null;
+            if ("System.out.println used".equals(finding.getTitle())) {
+                Matcher matcher = Pattern.compile("^(\\s*)System\\.out\\.println\\s*\\((.*)\\)\\s*;\\s*$").matcher(original);
+                if (matcher.matches()) {
+                    String className = "DataGuard";
+                    String sourceText = String.join("\n", lines);
+                    Matcher classMatcher = Pattern.compile("\\bclass\\s+([A-Za-z_$][A-Za-z0-9_$]*)").matcher(sourceText);
+                    if (classMatcher.find()) className = classMatcher.group(1);
+                    updated = matcher.group(1) + "System.getLogger(\"" + className
+                            + "\").log(System.Logger.Level.INFO, String.valueOf(" + matcher.group(2) + "));";
+                }
+            } else if ("Empty catch block".equals(finding.getTitle())) {
+                Matcher matcher = Pattern.compile("^(\\s*)catch\\s*\\(([^)]*?\\s+([A-Za-z_$][A-Za-z0-9_$]*))\\)\\s*\\{\\s*}\\s*$").matcher(original);
+                if (matcher.matches()) {
+                    updated = matcher.group(1) + "catch (" + matcher.group(2)
+                            + ") { throw new IllegalStateException(\"Operation failed\", "
+                            + matcher.group(3) + "); }";
+                }
+            }
+            if (updated == null) {
+                return ResponseEntity.unprocessableEntity().body(Map.of(
+                        "message", "A safe automatic patch is not available for this exact line. Use the suggested fix and review it manually."));
+            }
+            lines.set(index, updated);
+            Files.write(source, lines, StandardCharsets.UTF_8);
+            finding.setStatus("RESOLVED");
+            findingRepository.save(finding);
+            List<Finding> all = findingRepository.findByReviewId(reviewId);
+            int score = 100;
+            for (Finding item : all) {
+                if ("RESOLVED".equalsIgnoreCase(item.getStatus())) continue;
+                if ("HIGH".equalsIgnoreCase(item.getSeverity()) || "CRITICAL".equalsIgnoreCase(item.getSeverity())) score -= 10;
+                else if ("MEDIUM".equalsIgnoreCase(item.getSeverity())) score -= 5;
+                else score -= 2;
+            }
+            finding.getReview().setQualityScore(Math.max(0, score));
+            reviewRepository.save(finding.getReview());
+            return ResponseEntity.ok(Map.of(
+                    "message", "A safe fix was applied to the uploaded project file.",
+                    "findingId", finding.getId(),
+                    "status", "RESOLVED",
+                    "qualityScore", finding.getReview().getQualityScore(),
+                    "modifiedFile", finding.getFilePath()));
+        } catch (IOException exception) {
+            return ResponseEntity.internalServerError().body(Map.of("message", "Could not safely update the uploaded project file."));
+        }
     }
 
     public ProjectController(ProjectService projectService, UserRepository userRepository, FindingRepository findingRepository,

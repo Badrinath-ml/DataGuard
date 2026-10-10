@@ -18,13 +18,24 @@ public class AIConversationSession {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "review_id")
+    private Review review;
+
+    @Column(nullable = false, length = 180)
+    private String title = "New scan";
+
     @Column(nullable = false)
     private Instant updatedAt = Instant.now();
 
     public Long getId() { return id; }
     public UUID getSessionId() { return sessionId; }
     public User getUser() { return user; }
+    public Review getReview() { return review; }
+    public String getTitle() { return title; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUser(User user) { this.user = user; }
+    public void setReview(Review review) { this.review = review; }
+    public void setTitle(String title) { this.title = title; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }
