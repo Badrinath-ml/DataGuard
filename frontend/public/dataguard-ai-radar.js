@@ -10,14 +10,16 @@ style.textContent += "#out .d18-find-heading{font-size:18px;font-weight:750;text
 document.head.append(style);
 function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined&&text!==null)n.textContent=String(text);if(cls)n.className=cls;return n}
 function parseJson(v){
- if(v&&typeof v==='object'&&!Array.isArray(v))return v;
+ if(Array.isArray(v))return{tools:v};
+ if(v&&typeof v==='object')return v;
  let raw=String(v||'').trim(),f=String.fromCharCode(96).repeat(3);
  if(raw.startsWith(f)){const i=raw.indexOf('\n');if(i>=0)raw=raw.slice(i+1);if(raw.endsWith(f))raw=raw.slice(0,-f.length).trim()}
- try{return JSON.parse(raw)}catch(_){}
+ const normalize=value=>Array.isArray(value)?{tools:value}:value;
+ try{return normalize(JSON.parse(raw))}catch(_){}
  const a=raw.indexOf('{'),b=raw.lastIndexOf('}');
- if(a>=0&&b>a){try{return JSON.parse(raw.slice(a,b+1))}catch(_){}}
+ if(a>=0&&b>a){try{return normalize(JSON.parse(raw.slice(a,b+1)))}catch(_){}}
  const c=raw.indexOf('['),d=raw.lastIndexOf(']');
- if(c>=0&&d>c){try{return JSON.parse(raw.slice(c,d+1))}catch(_){}}
+ if(c>=0&&d>c){try{return normalize(JSON.parse(raw.slice(c,d+1)))}catch(_){}}
  return null
 }
 function pricing(t){
@@ -41,12 +43,23 @@ function normTool(x,category){
  return{name:String(x.name||x.tool||x.title||'Recommended tool'),purpose:String(x.purpose||x.description||x.primaryUse||x.use||x.summary||'A useful tool for this task.'),bestFor:String(x.bestFor||x.why||''),howToUse:String(x.howToUse||''),pricingType:String(x.pricingType||x.accessType||x.pricing||''),pricingDetails:String(x.pricingDetails||x.price||x.pricing||''),hasFreePlan:typeof x.hasFreePlan==='boolean'?x.hasFreePlan:null,monthlyPriceUsd:typeof x.monthlyPriceUsd==='number'&&Number.isFinite(x.monthlyPriceUsd)?x.monthlyPriceUsd:null,category:String(x.category||category||''),url:String(x.url||x.website||x.officialUrl||x.link||'')}
 }
 function collectTools(data,mode){
- let arr=mode==='workflow'?(Array.isArray(data.recommendedTools)?data.recommendedTools:[]):(Array.isArray(data.tools)?data.tools:[]);
+ if(Array.isArray(data))data={tools:data};
+ data=data&&typeof data==='object'?data:{};
+ const candidates=mode==='workflow'
+  ?[data.recommendedTools,data.tools,data.results,data.recommendations]
+  :[data.tools,data.recommendedTools,data.results,data.recommendations,data.items,data.aiTools,data.toolRecommendations,data.products];
+ let arr=candidates.find(Array.isArray)||[];
+ if(!arr.length&&data.data&&typeof data.data==='object'){
+  const nested=data.data;
+  arr=[nested.tools,nested.recommendedTools,nested.results,nested.recommendations,nested.items].find(Array.isArray)||[];
+ }
  if(!arr.length&&mode==='workflow'&&Array.isArray(data.steps)){
-  arr=[];data.steps.forEach(s=>{if(Array.isArray(s.tools))arr.push(...s.tools);if(s.tool)arr.push(...String(s.tool).split(/[,;]\s*/))})
+  arr=[];data.steps.forEach(step=>{if(Array.isArray(step.tools))arr.push(...step.tools);if(step.tool)arr.push(...String(step.tool).split(/[,;]\\s*/))})
  }
  const seen=new Set();
- return arr.map(x=>normTool(x,data.category)).filter(t=>mode==='workflow'||/^https?:\/\//i.test(t.url)||Boolean(domainForTool(t))).filter(t=>{const k=t.name.trim().toLowerCase();if(!k||seen.has(k))return false;seen.add(k);return true}).slice(0,mode==='workflow'?15:24)
+ return arr.map(x=>normTool(x,data.category)).filter(t=>t.name&&t.name.trim()).filter(t=>{
+  const k=t.name.trim().toLowerCase();if(seen.has(k))return false;seen.add(k);return true
+ }).slice(0,mode==='workflow'?15:24)
 }
 function budget(){const b=$('.opts .ch[data-g="b"].on');return b?b.textContent.trim().toLowerCase():'any price'}
 function visibleTools(arr){
@@ -131,7 +144,7 @@ function renderTools(data,resetPage=false){
  out.append(el('h3','Recommended AI tools','d18-find-heading'));
  if(!filtered.length){
   const selected=budget();
-  const msg=selected.includes('free only')?'No tools with a confirmed free plan matched this request. Choose Any price to see all recommendations.':selected.includes('under $20')?'No tools with a confirmed free plan or a known monthly price under 20 USD matched this request. Choose Any price to see all recommendations.':'No relevant tools were returned. Try a more specific request.';
+  const msg=selected.includes('free only')?'The AI returned no tools with a confirmed free plan. Choose Any price to inspect the recommendations, or try again.':selected.includes('under $20')?'No returned tools have a confirmed free plan or a known monthly price under USD 20. Choose Any price to inspect all recommendations.':'The AI response did not contain a recognizable list of tools. This is a response-format issue, not a price-filter match. Try again; if it repeats, check the backend AI provider logs.';
   out.append(el('div',msg,'d18-find-empty'));return;
  }
  const shown=filtered.slice(0,findVisibleCount),grid=el('div',null,'d18-find-grid');shown.forEach(tool=>grid.append(makeFindCard(tool)));out.append(grid);
