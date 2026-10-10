@@ -124,6 +124,9 @@ public class AIChatController {
                     .orElse(null);
             if (conversation == null) return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("message", "This scan session was not found for your account."));
+            if ("AI_RADAR".equalsIgnoreCase(conversation.getContextType())) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Use AI Radar to continue this conversation."));
+            }
 
             List<Turn> turns = new ArrayList<>();
             turns.add(new Turn("system", buildSystemContext(conversation)));
@@ -327,6 +330,7 @@ public class AIChatController {
                 conversation.setUser(user);
                 conversation.setContextType("AI_RADAR");
                 conversation.setTitle(cleanTitle(request.prompt()));
+                conversation = sessionRepository.save(conversation);
             }
 
             List<Turn> turns = new ArrayList<>();
