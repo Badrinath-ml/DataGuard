@@ -21,8 +21,10 @@ class CodeQualityAnalyzerTest {
                 class Example {
                     void run() {
                         System.out.println("debug");
-                        try { work(); } catch (Exception e) { }
-                        try { work(); } catch (Exception e) { log(e); }
+                        try { work(); }
+                        catch (Exception e) { }
+                        try { work(); }
+                        catch (Exception e) { log(e); }
                     }
                 }
                 """);
