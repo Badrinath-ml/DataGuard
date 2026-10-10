@@ -139,24 +139,26 @@ function renderTools(data,resetPage=false){
  const shown=filtered.slice(0,findVisibleCount),grid=el('div',null,'d18-find-grid');shown.forEach(tool=>grid.append(makeFindCard(tool)));out.append(grid);
  if(filtered.length>9){const wrap=el('div',null,'d18-more-wrap'),more=shown.length<filtered.length,button=el('button',more?'View more tools ('+(filtered.length-shown.length)+' more)':'Show fewer tools','d18-more-button');button.type='button';button.dataset.radarMore=more?'more':'less';wrap.append(button);out.append(wrap)}
 }
+function plainText(value){return String(value||'').replace(/\*\*/g,'').replace(/__(.*?)__/g,'$1').replace(/^\s*(?:[-*•]|\d+[.)])\s*/,'').replace(/\s+/g,' ').trim()}
+function stepIcon(index){return ['◎','⌕','✎','◇','⚑','↗','✓','✦'][index%8]}
+function drawWorkflowEdges(map){
+ const svg=map.querySelector('.d18-flow-links');if(!svg)return;
+ const nodes=Array.from(map.querySelectorAll('.d18-flow-node')),width=map.clientWidth,height=map.clientHeight;
+ svg.setAttribute('viewBox','0 0 '+width+' '+height);svg.replaceChildren();
+ if(window.matchMedia('(max-width: 600px)').matches)return;
+ const ns='http://www.w3.org/2000/svg',rect=map.getBoundingClientRect();
+ nodes.forEach((node,index)=>{if(index>=nodes.length-1)return;const a=node.getBoundingClientRect(),b=nodes[index+1].getBoundingClientRect();const x1=a.left+a.width/2-rect.left,y1=a.top+a.height/2-rect.top,x2=b.left+b.width/2-rect.left,y2=b.top+b.height/2-rect.top,mid=(y1+y2)/2,dx=x2-x1;const p=document.createElementNS(ns,'path');p.setAttribute('class','d18-flow-edge');p.setAttribute('d',Math.abs(y2-y1)<8?'M '+x1+' '+y1+' C '+(x1+dx*.35)+' '+(y1-22)+', '+(x1+dx*.65)+' '+(y2-22)+', '+x2+' '+y2:'M '+x1+' '+y1+' C '+(x1+dx*.16)+' '+mid+', '+(x2-dx*.16)+' '+mid+', '+x2+' '+y2);svg.append(p)})
+}
 function renderWorkflow(data){
- const out=$('#out');out.replaceChildren();
- out.append(el('h3',data.title||'Your step-by-step workflow','d18-heading'));
- if(data.summary)out.append(el('p',data.summary,'d18-summary'));
- const steps=Array.isArray(data.steps)?data.steps.slice(0,10):(Array.isArray(data.workflow)?data.workflow.slice(0,10):[]);
- if(!steps.length){out.append(el('div','The AI provider did not return workflow steps. Please retry.','d18-error'));return}
- const grid=el('div',null,'d18-steps');
- steps.forEach((s,i)=>{
-  const card=el('article',null,'d18-step');card.append(el('div',String(i+1),'d18-step-number'));card.append(el('h3',s.title||('Step '+(i+1))));
-  card.append(el('p',s.action||s.description||s.details||'Complete this step and verify the outcome before moving on.'));
-  if(s.deliverable)card.append(el('p','Outcome: '+s.deliverable));
-  const items=Array.isArray(s.tools)?s.tools:(s.tool?[s.tool]:[]);
-  if(items.length){const box=el('div',null,'d18-step-tools');box.append(el('b','TOOLS FOR THIS STEP'));items.slice(0,3).forEach(t=>box.append(el('span',normTool(t).name)));card.append(box)}
-  grid.append(card)
- });
- out.append(grid);
- const tools=collectTools(data,'workflow');
- toolGrid(out,tools,'RECOMMENDED AI TOOLS FOR THIS WORKFLOW');
+ const out=$('#out');out.replaceChildren();out.append(el('h3',plainText(data.title)||'Your connected workflow','d18-heading'));
+ if(data.summary)out.append(el('p',plainText(data.summary),'d18-summary'));
+ const raw=Array.isArray(data.steps)?data.steps:(Array.isArray(data.workflow)?data.workflow:[]);
+ const steps=raw.map((s,i)=>{if(typeof s==='string')s={action:s};s=s&&typeof s==='object'?s:{};let action=plainText(s.action||s.description||s.details||s.instruction||s.purpose||''),title=plainText(s.title||s.name||'');if(!title||/^step\s*\d+$/i.test(title)){const m=action.match(/^([^:.!?]{4,55})[:.!?]?\s*(.*)$/);if(m&&m[2]&&m[1].split(/\s+/).length<=7){title=m[1].trim();action=m[2].trim()||action}else title='Step '+(i+1)}if(!action&&s.deliverable)action=plainText(s.deliverable);return Object.assign({},s,{title:title,action:action})}).filter(x=>x.action.length>=12&&!/^[-—–_*]+$/.test(x.action));
+ if(!steps.length){out.append(el('div','The AI provider did not return complete workflow steps. Please retry.','d18-error'));return}
+ const map=el('div',null,'d18-flow-map'),svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','d18-flow-links');svg.setAttribute('aria-hidden','true');map.append(svg);
+ steps.forEach((step,i)=>{const row=Math.floor(i/3),pos=i%3,col=row%2===0?pos:2-pos,node=el('article',null,'d18-flow-node');node.dataset.stepIndex=String(i);node.style.gridColumn=String(col+1);const head=el('div',null,'d18-flow-node-head'),orb=el('div',stepIcon(i),'d18-flow-orb'),title=el('div',null,'d18-flow-title-box');title.append(el('span','PHASE '+String(i+1).padStart(2,'0'),'d18-flow-kicker'),el('h3',step.title||('Step '+(i+1))));head.append(orb,title);node.append(head,el('p',step.action));if(step.timeEstimate)node.append(el('span',plainText(step.timeEstimate),'d18-flow-time'));if(step.deliverable)node.append(el('p','Outcome: '+plainText(step.deliverable),'d18-flow-deliverable'));const tools=Array.isArray(step.tools)?step.tools:(step.tool?[step.tool]:[]);if(tools.length){const chips=el('div',null,'d18-flow-chips');tools.slice(0,3).forEach(t=>chips.append(el('span',normTool(t).name,'d18-flow-chip')));node.append(chips)}map.append(node)});
+ out.append(map);toolGrid(out,collectTools(data,'workflow'),'Recommended AI tools for this workflow');
+ const redraw=()=>drawWorkflowEdges(map);if(typeof requestAnimationFrame==='function')requestAnimationFrame(redraw);else redraw();if(!map.dataset.resizeBound){map.dataset.resizeBound='1';window.addEventListener('resize',redraw,{passive:true})}
 }
 function fallback(reply,mode){
  const raw=String(reply||'').trim();if(!raw)return null;
