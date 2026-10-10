@@ -179,6 +179,16 @@ function fallback(reply,mode){
  raw.split(/\r?\n/).forEach(line=>{const x=plainText(line),m=x.match(/^([^:|—–-]{2,60})\s*(?::|—|–|-|\|)\s*(.{8,})$/);if(!m||seen.has(m[1].toLowerCase())||!looksLikeProductName(m[1]))return;seen.add(m[1].toLowerCase());tools.push({name:m[1].trim(),purpose:m[2].trim(),pricingDetails:'Verify current plan/pricing.',category:'Recommended tool'})});
  return tools.length?{tools:tools}:null
 }
+function hasRadarContent(data,mode){if(!data||typeof data!=='object')return false;if(mode==='workflow')return Array.isArray(data.steps)||Array.isArray(data.workflow);return ['tools','recommendedTools','results','recommendations','items','aiTools','toolRecommendations','products'].some(k=>Array.isArray(data[k]))}
+function unwrapRadarData(value,mode,depth){
+ if(depth>4||value==null)return null;
+ const parsed=typeof value==='string'?parseJson(value):value;if(!parsed)return null;
+ if(Array.isArray(parsed))return mode==='workflow'?null:{tools:parsed};
+ if(typeof parsed!=='object')return null;
+ if(hasRadarContent(parsed,mode))return parsed;
+ for(const key of ['data','result','output','response','structured','content','payload']){if(parsed[key]!=null){const found=unwrapRadarData(parsed[key],mode,depth+1);if(found)return found}}
+ return null
+}
 async function run(mode,prompt,sessionId){
  prompt=String(prompt||'').trim();if(!prompt){const f=mode==='workflow'?$('#wq'):$('#fq');if(f)f.focus();return}
  if(!token()){window.pending='radar';if(window.go)window.go('auth');return}
@@ -190,7 +200,7 @@ async function run(mode,prompt,sessionId){
   const response=await fetch(base+'/api/ai/radar',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token()},body:JSON.stringify({prompt:prompt,mode:mode,category:category?category.textContent.trim():'',budget:budgetNode?budgetNode.textContent.trim():'Any price',sessionId:sessionId||null})});
   const raw=await response.text();let payload={};try{payload=raw?JSON.parse(raw):{}}catch(_){payload={reply:raw}}
   if(!response.ok)throw Error(payload.message||payload.error||('AI Radar request failed ('+response.status+').'));
-  let data=parseJson(payload.data||payload.reply||payload.response||payload);
+  let data=unwrapRadarData(payload.data,mode,0)||unwrapRadarData(payload.reply,mode,0)||unwrapRadarData(payload.response,mode,0)||unwrapRadarData(payload.output,mode,0)||unwrapRadarData(payload,mode,0);
   if(!data)data=fallback(payload.reply||payload.response||'',mode);
   if(!data)throw Error('The AI provider returned an empty or invalid result. Please retry.');
   if(mode==='workflow'&&!Array.isArray(data.steps)&&Array.isArray(data.workflow))data.steps=data.workflow;
