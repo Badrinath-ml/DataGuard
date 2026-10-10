@@ -170,7 +170,8 @@ async function run(mode,prompt,sessionId){
  prompt=String(prompt||'').trim();if(!prompt){const f=mode==='workflow'?$('#wq'):$('#fq');if(f)f.focus();return}
  if(!token()){window.pending='radar';if(window.go)window.go('auth');return}
  lastMode=mode;lastPrompt=prompt;
- const out=$('#out');out.replaceChildren(el('div',mode==='workflow'?'Building the workflow and choosing useful tools…':'Finding up to 15 relevant tools…','d18-loading'));
+ if(mode==='find')findVisibleCount=9;
+ const out=$('#out');out.replaceChildren(el('div',mode==='workflow'?'Building your workflow and choosing useful tools…':'Finding relevant AI tools…','d18-loading'));
  const category=$('#cats .on'),budgetNode=$('.opts .ch[data-g="b"].on');
  try{
   const response=await fetch(base+'/api/ai/radar',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token()},body:JSON.stringify({prompt:prompt,mode:mode,category:category?category.textContent.trim():'',budget:budgetNode?budgetNode.textContent.trim():'Any price',sessionId:sessionId||null})});
@@ -181,7 +182,7 @@ async function run(mode,prompt,sessionId){
   if(!data)throw Error('The AI provider returned an empty or invalid result. Please retry.');
   if(mode==='workflow'&&!Array.isArray(data.steps)&&Array.isArray(data.workflow))data.steps=data.workflow;
   lastResult=data;
-  if(mode==='workflow')renderWorkflow(data);else renderTools(data);
+  if(mode==='workflow')renderWorkflow(data);else renderTools(data,true);
   document.dispatchEvent(new Event('dataguard:radar-history-updated'));
  }catch(error){out.replaceChildren(el(error.message||'AI Radar could not complete this request.','d18-error'));document.dispatchEvent(new Event('dataguard:radar-history-updated'))}
 }
@@ -197,7 +198,7 @@ async function openHistory(id){
   lastPrompt=u?String(u.content||''):'';lastResult=saved;
   const mode=Array.isArray(saved.steps)||Array.isArray(saved.workflow)?'workflow':'find';lastMode=mode;
   if(mode==='workflow'){if(!Array.isArray(saved.steps)&&Array.isArray(saved.workflow))saved.steps=saved.workflow;renderWorkflow(saved);if($('#wq'))$('#wq').value=lastPrompt}
-  else{renderTools(saved);if($('#fq'))$('#fq').value=lastPrompt}
+  else{renderTools(saved,true);if($('#fq'))$('#fq').value=lastPrompt}
   if($('#pf'))$('#pf').hidden=mode!=='find';if($('#pw'))$('#pw').hidden=mode!=='workflow';
   $$('.seg button[data-m]').forEach(b=>b.classList.toggle('on',b.dataset.m===mode||(mode==='workflow'&&b.dataset.m==='flow')))
  }catch(error){out.replaceChildren(el(error.message||'Could not restore this session.','d18-error'))}
@@ -205,10 +206,11 @@ async function openHistory(id){
 function handleClick(event){
  const t=event.target instanceof Element?event.target:null;if(!t)return;
  const find=t.closest('#ff'),workflow=t.closest('#wf'),quick=t.closest('.pl2 button'),budgetButton=t.closest('.opts .ch[data-g="b"]');
+ if(t.closest('[data-radar-more]')){event.preventDefault();event.stopImmediatePropagation();const button=t.closest('[data-radar-more]');findVisibleCount=button.dataset.radarMore==='more'?findVisibleCount+9:9;if(lastResult)renderTools(lastResult);return}
  if(find){event.preventDefault();event.stopImmediatePropagation();const c=$('#cats .on');run('find',($('#fq')&&$('#fq').value.trim())||(c?c.textContent.trim()+' tools':''));return}
  if(workflow){event.preventDefault();event.stopImmediatePropagation();run('workflow',$('#wq')?$('#wq').value.trim():'');return}
  if(quick){event.preventDefault();event.stopImmediatePropagation();const wf=$('#pw')&&!$('#pw').hidden,s=quick.dataset.x||quick.textContent.trim();run(wf?'workflow':'find',wf?s:(($('#fq')&&$('#fq').value.trim())?$('#fq').value.trim()+' '+s:s));return}
- if(budgetButton){event.preventDefault();event.stopImmediatePropagation();$$('.opts .ch[data-g="b"]').forEach(b=>b.classList.toggle('on',b===budgetButton));if(lastResult){if(lastMode==='workflow')renderWorkflow(lastResult);else renderTools(lastResult)}}
+ if(budgetButton){event.preventDefault();event.stopImmediatePropagation();$$('.opts .ch[data-g="b"]').forEach(b=>b.classList.toggle('on',b===budgetButton));if(lastResult){if(lastMode==='workflow')renderWorkflow(lastResult);else renderTools(lastResult,true)}}
 }
 function handleKey(event){
  const t=event.target;if(!t||!['fq','wq'].includes(t.id)||event.key!=='Enter'||(t.id==='fq'&&event.shiftKey))return;
