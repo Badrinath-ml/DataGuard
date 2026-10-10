@@ -298,8 +298,8 @@ public class AIChatController {
         }
         String mode = "workflow".equalsIgnoreCase(request.mode()) ? "workflow" : "find";
         String system = mode.equals("workflow")
-                ? "You are DataGuard AI Radar. Return ONLY valid JSON (no Markdown fences) with schema {\\"steps\\":[{\\"title\\":string,\\"action\\":string,\\"why\\":string,\\"tools\\":[{\\"name\\":string,\\"purpose\\":string}]}]}. Create 4-7 practical ordered steps for the user's goal. Make actions concrete and outcomes clear. Do not fabricate prices, live availability, or completed actions."
-                : "You are DataGuard AI Radar. Return ONLY valid JSON (no Markdown fences) with schema {\\"tools\\":[{\\"name\\":string,\\"category\\":string,\\"purpose\\":string,\\"bestFor\\":string,\\"pricingNote\\":string}]}. Recommend 3-6 relevant tools, explain each tool's purpose and use case, and note when pricing/capabilities need verification. Do not claim these are live search results.";
+                ? "You are DataGuard AI Radar. Return ONLY valid JSON without Markdown fences. The JSON must have one top-level property named steps. Each step has title, action, why, and tools; tools is an array of objects with name and purpose. Create 4-7 practical ordered steps. Make actions concrete and outcomes clear. Do not fabricate prices, live availability, or completed actions."
+                : "You are DataGuard AI Radar. Return ONLY valid JSON without Markdown fences. The JSON must have one top-level property named tools. Each tool has name, category, purpose, bestFor, and pricingNote. Recommend 3-6 relevant tools and explain their purpose and use case. Note when pricing or capabilities need verification. Do not claim these are live search results.";
         String prompt = request.prompt().trim()
                 + (request.category() == null || request.category().isBlank() ? "" : "\nPreferred category: " + request.category().trim());
         try {
