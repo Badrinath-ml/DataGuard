@@ -55,7 +55,7 @@ public class AIChatController {
 
     public record ChatRequest(String message, UUID sessionId) {}
     public record SessionRequest(String title, Long reviewId) {}
-    public record RadarRequest(String prompt, String mode, String category, UUID sessionId) {}
+    public record RadarRequest(String prompt, String mode, String category, String budget, UUID sessionId) {}
 
     @PostMapping("/chat/sessions")
     public ResponseEntity<?> createSession(@RequestBody(required = false) SessionRequest request,
@@ -134,7 +134,7 @@ public class AIChatController {
                     .sorted(Comparator.comparing(AIConversationMessage::getCreatedAt))
                     .forEach(message -> turns.add(new Turn(message.getRole(), message.getContent())));
             turns.add(new Turn("user", request.message().trim()));
-            String reply = provider.complete(turns);
+            String reply = provider.completeJson(turns);
             saveMessage(conversation, "user", request.message().trim());
             saveMessage(conversation, "assistant", reply);
             conversation.setUpdatedAt(Instant.now());
@@ -303,17 +303,18 @@ public class AIChatController {
         String mode = "workflow".equalsIgnoreCase(request.mode()) ? "workflow" : "find";
         String system = mode.equals("workflow")
                 ? """
-                  You are DataGuard AI Radar, a practical workflow planner. Return ONLY valid JSON, no Markdown fences.
-                  Output schema: {"steps":[{"title":"short step title","action":"specific instructions to do this step","deliverable":"what should exist when finished","tools":[{"name":"tool name","why":"why this tool fits this step","howToUse":"specific way to use it","pricingType":"FREE_ONLY or FREE_WITH_LIMITS or FREE_TRIAL_THEN_PAID or FREEMIUM or PAID_SUBSCRIPTION or PAID_USAGE","pricingDetails":"careful, non-invented pricing note"}]}]}.
-                  Create 5-10 ordered, actionable steps for the goal. Explain what the user should do first, next, and how to validate the result. Attach relevant AI/software tools to the steps after explaining the action. Prefer 1-3 useful tools per step, avoid irrelevant duplicates, and use known real tools. Pricing varies and can change; if uncertain say "Verify current plan/pricing" rather than inventing prices. Never claim to have performed actions.
+                  You are DataGuard AI Radar, a practical workflow planner. Return one valid JSON object only, with no Markdown fences or surrounding prose.
+                  Schema: {"title":"short workflow title","summary":"one-sentence outcome","steps":[{"title":"action title","action":"specific instructions","deliverable":"verifiable outcome","tools":[{"name":"real tool name","purpose":"main use","why":"why it fits this step","howToUse":"concrete use","pricingType":"FREE_ONLY or FREE_WITH_LIMITS or FREE_TRIAL_THEN_PAID or FREEMIUM or PAID_SUBSCRIPTION or PAID_USAGE","pricingDetails":"brief cautious pricing note","url":"official URL when known"}]}],"recommendedTools":[{"name":"real tool name","category":"short category","purpose":"main use","bestFor":"fit for this goal","pricingType":"FREE_ONLY or FREE_WITH_LIMITS or FREE_TRIAL_THEN_PAID or FREEMIUM or PAID_SUBSCRIPTION or PAID_USAGE","pricingDetails":"pricing note or Verify current plan/pricing","url":"official URL when known"}]}.
+                  Create 6-10 sequential actionable steps from planning through implementation, testing, launch, and improvement as relevant. Include 1-3 tools per step and up to 15 distinct relevant tools in recommendedTools. Never invent tool names, URLs, exact prices, or credit amounts. JSON must be syntactically valid.
                   """
                 : """
-                  You are DataGuard AI Radar, a tool discovery assistant. Return ONLY valid JSON, no Markdown fences.
-                  Output schema: {"tools":[{"name":"real tool name","category":"short category","purpose":"what the tool is mainly used for","bestFor":"specific fit for the user's goal","pricingType":"FREE_ONLY or FREE_WITH_LIMITS or FREE_TRIAL_THEN_PAID or FREEMIUM or PAID_SUBSCRIPTION or PAID_USAGE","pricingDetails":"brief pricing/credit/trial detail; do not invent exact prices"}]}.
-                  Recommend up to 15 distinct, relevant, real tools (aim for 15 when there are enough good matches). Include a balanced mix of free-only, free with limits/credits, freemium, free-trial-then-paid, and paid tools when genuinely relevant. Explain the main use of each tool. Be careful: pricing changes; if uncertain use "Verify current plan/pricing". Do not claim live web research or live availability. Do not output paragraphs outside the JSON.
+                  You are DataGuard AI Radar, a tool discovery assistant. Return one valid JSON object only, with no Markdown fences or surrounding prose.
+                  Schema: {"tools":[{"name":"real tool name","category":"short category","purpose":"main use","bestFor":"specific fit for the user's goal","pricingType":"FREE_ONLY or FREE_WITH_LIMITS or FREE_TRIAL_THEN_PAID or FREEMIUM or PAID_SUBSCRIPTION or PAID_USAGE","pricingDetails":"pricing/credits/trial note or Verify current plan/pricing","url":"official URL when known"}]}.
+                  Recommend 15 distinct relevant tools when enough suitable tools exist. Explain each tool's main use and fit. Distinguish free-only, limited free/credits, free trial then paid, freemium, paid subscription, and usage-based pricing. Never invent prices, credit amounts, or URLs. JSON must be syntactically valid.
                   """;
         String prompt = request.prompt().trim()
-                + (request.category() == null || request.category().isBlank() ? "" : "\nPreferred category: " + request.category().trim());
+                + (request.category() == null || request.category().isBlank() ? "" : "\nPreferred category: " + request.category().trim())
+                + (request.budget() == null || request.budget().isBlank() ? "" : "\nBudget preference: " + request.budget().trim());
         try {
             User user = currentUser(authentication);
             AIConversationSession conversation;
@@ -362,7 +363,7 @@ public class AIChatController {
                     if (newline >= 0) json = json.substring(newline + 1);
                 }
                 if (json.endsWith("```")) json = json.substring(0, json.length() - 3).trim();
-                response.put("data", new ObjectMapper().readValue(json, Map.class));
+                response.put("data", parseJsonWithFallback(json));
             } catch (Exception ignored) {
                 // The UI has a safe parser for provider responses that are not valid JSON.
             }
@@ -372,4 +373,28 @@ public class AIChatController {
                     .body(Map.of("message", "AI Radar could not complete the request. Check the backend provider configuration and logs."));
         }
     }
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseJsonWithFallback(String raw) throws Exception {
+        String json = raw == null ? "" : raw.trim();
+        String fence = String.valueOf((char) 96).repeat(3);
+        if (json.startsWith(fence)) {
+            int newline = json.indexOf('\n');
+            if (newline >= 0) json = json.substring(newline + 1);
+            if (json.endsWith(fence)) json = json.substring(0, json.length() - fence.length()).trim();
+        }
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            Object parsed = mapper.readValue(json, Object.class);
+            if (parsed instanceof Map<?, ?> map) return (Map<String, Object>) map;
+        } catch (Exception ignored) {
+            int first = json.indexOf('{');
+            int last = json.lastIndexOf('}');
+            if (first >= 0 && last > first) {
+                Object parsed = mapper.readValue(json.substring(first, last + 1), Object.class);
+                if (parsed instanceof Map<?, ?> map) return (Map<String, Object>) map;
+            }
+        }
+        throw new IllegalArgumentException("AI response was not a JSON object.");
+    }
+
 }
