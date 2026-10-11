@@ -62,5 +62,6 @@ The backend defaults intentionally allow only local Vite origins. If frontend an
 - Passwords are hashed with BCrypt; plain-text passwords are not stored.
 - Database credentials, JWT secret, and Groq key remain server-side.
 - The fix endpoint currently returns a reviewable suggestion; it does not silently rewrite source files.
-- Uploaded archives are extracted to temporary local storage. Multi-instance production deployments should use private durable object storage.
+- Uploaded archives are extracted under `DATAGUARD_STORAGE_DIR` (defaults to the OS temporary directory for local development). On a single-instance deployment, point it at a private persistent disk mount so review downloads and fix operations survive restarts. Multi-instance deployments need shared private object storage; local disk alone is not shared across replicas.
+- Invalid/empty ZIPs are rejected, archive path traversal is blocked, and failed extraction/review attempts clean up their workspace and roll back database work.
 - Keep `.env` out of Git. If a key has ever been committed, rotate it.
