@@ -118,7 +118,7 @@ class DeploymentReadinessIntegrationTest {
         String email = "upload-" + UUID.randomUUID() + "@example.com";
         String token = registerAndGetToken("Upload Integration", email, "Correct-Horse-Battery-42");
         byte[] archive = createZip("src/App.java",
-                "public class App {\n  public void run() { System.out.println(\"hello\"); }\n}\n");
+                "public class App {\n  public void run() {\n    System.out.println(\"hello\");\n  }\n}\n");
 
         MvcResult uploaded = mockMvc.perform(multipart("/api/projects/upload")
                         .file(new MockMultipartFile("file", "sample.zip", "application/zip", archive))
