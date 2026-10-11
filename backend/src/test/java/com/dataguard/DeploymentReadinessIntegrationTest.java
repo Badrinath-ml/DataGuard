@@ -44,7 +44,7 @@ class DeploymentReadinessIntegrationTest {
     @Test
     void migrationsHealthAuthenticationJwtProtectedRoutesAndCorsWorkTogether() throws Exception {
         assertNotNull(flyway.info().current(), "Flyway must apply a schema migration before Hibernate starts");
-        assertEquals("1", flyway.info().current().getVersion().getVersion());
+        assertEquals("2", flyway.info().current().getVersion().getVersion(), "Both baseline and conversation-title migrations must be applied");
         Integer tableCount = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*) FROM information_schema.tables
                 WHERE table_schema = current_schema()
