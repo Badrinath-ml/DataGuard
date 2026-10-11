@@ -177,7 +177,8 @@ function looksLikeProductName(value){
  const name=String(value||'').trim();if(name.length<2||name.length>64)return false;
  if(/^(purpose|features?|pros? and cons?|workflow|step\s*\d+|tools?|ai tools?|recommended tools?|recommended ai tools|tool recommendations?|conclusion|summary|research|pricing|comparison|product recommendations?)$/i.test(name))return false;
  if(/^(?:ai )?tools? for .+$/i.test(name))return false;
- if(/\b(vs\.?|versus|compare|comparison|length\s*(?:&|and)\s*style|human[- ]like presenters?|narrated(?:\/| or )presenter[- ]style videos?|presenter[- ]style videos?|automation\s*(?:&|and|vs\.?|versus)\s*manual control|project management software|document editors?|whiteboarding tools?|pricing comparison|top tools|best tools|tool categories|bulk personalization|commercial licensing|data privacy|gpu requirements?|full control|resolution\s*(?:&|and)\s*export limits?|turn existing text|subscription|workflow phase)\b/i.test(name))return false;
+ if(/^(?:define|consider|check|choose|focus on|look for|decide on|ensure|review|evaluate|compare|understand|plan|create|select)\\b/i.test(name))return false;
+ if(/\b(vs\.?|versus|compare|comparison|length\s*(?:&|and)\s*style|human[- ]like presenters?|narrated(?:\/| or )presenter[- ]style videos?|presenter[- ]style videos?|automation\s*(?:&|and|vs\.?|versus)\s*manual control|project management software|document editors?|whiteboarding tools?|pricing comparison|top tools|best tools|tool categories|bulk personalization|commercial licensing|data[- ]privacy(?: needs)?|workflow integration|no subscription|full control|gpu requirements?|full control|resolution\s*(?:&|and)\s*export limits?|turn existing text|subscription|workflow phase)\b/i.test(name))return false;
  if(name.split(/\s+/).length>7)return false;
  return true
 }
@@ -229,7 +230,7 @@ async function run(mode,prompt,sessionId){
  const out=$('#out');out.replaceChildren(el('div',mode==='workflow'?'Building your workflow and choosing useful tools…':'Finding relevant AI tools…','d18-loading'));
  const category=$('#cats .on'),budgetNode=$('.opts .ch[data-g="b"].on');let responseSessionId=null;
  try{
-  const response=await fetch(base+'/api/ai/radar',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token()},body:JSON.stringify({prompt:prompt,mode:mode,category:category?category.textContent.trim():'',budget:budgetNode?budgetNode.textContent.trim():'Any price',sessionId:sessionId||activeRadarSessionId||null})});
+  const response=await fetch(base+'/api/ai/radar',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token()},body:JSON.stringify({prompt:prompt,mode:mode,category:category?category.textContent.trim():'',budget:budgetNode?budgetNode.textContent.trim():'Any price',sessionId:sessionId||activeRadarSessionId||null}),signal:(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function'?AbortSignal.timeout(120000):undefined)});
   const raw=await response.text();let payload={};try{payload=raw?JSON.parse(raw):{}}catch(_){payload={message:raw}};
   responseSessionId=payload.sessionId||null;if(responseSessionId)setActiveRadarSession(responseSessionId);
   if(!response.ok){document.dispatchEvent(new Event('dataguard:radar-history-updated'));throw Error(payload.message||payload.error||('AI Radar request failed ('+response.status+').'))}
@@ -245,7 +246,7 @@ async function run(mode,prompt,sessionId){
  }catch(error){
   if(responseSessionId)setActiveRadarSession(responseSessionId);
   await loadActiveRadarHistory();
-  out.replaceChildren(el(error.message||'AI Radar could not complete this request.','d18-error'));
+  out.replaceChildren(el(error.name==='TimeoutError'||error.name==='AbortError'?'AI Radar took longer than two minutes. Check the backend provider logs/quota and retry; the session will remain in history.':(error.message||'AI Radar could not complete this request.'),'d18-error'));
   if(activeRadarTranscript.length>2)prependConversationHistory(out,activeRadarTranscript);
   document.dispatchEvent(new Event('dataguard:radar-history-updated'))
  }
