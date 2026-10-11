@@ -17,6 +17,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -193,6 +194,7 @@ public class ProjectController {
     }
 
     @PostMapping("/reviews/{reviewId}/findings/{findingId}/apply")
+    @Transactional
     public ResponseEntity<?> applySafeFix(
             @PathVariable Long reviewId,
             @PathVariable Long findingId,
@@ -265,27 +267,48 @@ public class ProjectController {
                 return ResponseEntity.unprocessableEntity().body(Map.of(
                         "message", "A safe automatic patch is not available for this exact line. Use the suggested fix and review it manually."));
             }
-            lines.set(index, updated);
-            Files.write(source, lines, StandardCharsets.UTF_8);
-            finding.setStatus("RESOLVED");
-            findingRepository.save(finding);
-            List<Finding> all = findingRepository.findByReviewId(reviewId);
-            int score = 100;
-            for (Finding item : all) {
-                if ("RESOLVED".equalsIgnoreCase(item.getStatus())) continue;
-                if ("CRITICAL".equalsIgnoreCase(item.getSeverity())) score -= 15;
-                else if ("HIGH".equalsIgnoreCase(item.getSeverity())) score -= 10;
-                else if ("MEDIUM".equalsIgnoreCase(item.getSeverity())) score -= 5;
-                else score -= 2;
+            // Keep a same-directory backup so a persistence failure cannot leave the
+            // source modified while the finding remains unresolved in the database.
+            Path backup = Files.createTempFile(source.getParent(), ".dataguard-fix-", ".bak");
+            Files.copy(source, backup, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            boolean preserveBackup = false;
+            try {
+                lines.set(index, updated);
+                Files.write(source, lines, StandardCharsets.UTF_8);
+                finding.setStatus("RESOLVED");
+                findingRepository.save(finding);
+                List<Finding> all = findingRepository.findByReviewId(reviewId);
+                int score = 100;
+                for (Finding item : all) {
+                    if ("RESOLVED".equalsIgnoreCase(item.getStatus())) continue;
+                    if ("CRITICAL".equalsIgnoreCase(item.getSeverity())) score -= 15;
+                    else if ("HIGH".equalsIgnoreCase(item.getSeverity())) score -= 10;
+                    else if ("MEDIUM".equalsIgnoreCase(item.getSeverity())) score -= 5;
+                    else score -= 2;
+                }
+                finding.getReview().setQualityScore(Math.max(0, score));
+                reviewRepository.save(finding.getReview());
+                return ResponseEntity.ok(Map.of(
+                        "message", "A safe fix was applied to the uploaded project file.",
+                        "findingId", finding.getId(),
+                        "status", "RESOLVED",
+                        "qualityScore", finding.getReview().getQualityScore(),
+                        "modifiedFile", finding.getFilePath()));
+            } catch (IOException | RuntimeException failure) {
+                try {
+                    Files.copy(backup, source, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException restoreFailure) {
+                    preserveBackup = true;
+                    failure.addSuppressed(restoreFailure);
+                }
+                if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
+                return ResponseEntity.internalServerError()
+                        .body(Map.of("message", "Could not safely update the uploaded project file."));
+            } finally {
+                if (!preserveBackup) {
+                    try { Files.deleteIfExists(backup); } catch (IOException ignored) { /* Best-effort cleanup. */ }
+                }
             }
-            finding.getReview().setQualityScore(Math.max(0, score));
-            reviewRepository.save(finding.getReview());
-            return ResponseEntity.ok(Map.of(
-                    "message", "A safe fix was applied to the uploaded project file.",
-                    "findingId", finding.getId(),
-                    "status", "RESOLVED",
-                    "qualityScore", finding.getReview().getQualityScore(),
-                    "modifiedFile", finding.getFilePath()));
         } catch (IOException exception) {
             return ResponseEntity.internalServerError().body(Map.of("message", "Could not safely update the uploaded project file."));
         }
