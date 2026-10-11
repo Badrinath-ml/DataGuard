@@ -67,8 +67,8 @@ function collectTools(data,mode){
 function budget(){const b=$('.opts .ch[data-g="b"].on');return b?b.textContent.trim().toLowerCase():'any price'}
 function visibleTools(arr){
  const b=budget();
- if(b.includes('free only')){const a=arr.filter(t=>pricing(t).kind==='FREE_ONLY');return a.length?a:arr}
- if(b.includes('under $20')){const a=arr.filter(t=>['FREE_ONLY','FREE_WITH_LIMITS','FREE_TRIAL_THEN_PAID','FREEMIUM'].includes(pricing(t).kind)||/\$\s?(?:0|[1-9]|1\d)(?:\.\d+)?\s*(?:\/|per month|monthly)/i.test(pricing(t).details));return a.length?a:arr}
+ if(b.includes('free only'))return arr.filter(t=>pricing(t).kind==='FREE_ONLY');
+ if(b.includes('under $20'))return arr.filter(t=>['FREE_ONLY','FREE_WITH_LIMITS','FREEMIUM'].includes(pricing(t).kind)||/\$\s?(?:0|[1-9]|1\d)(?:\.\d+)?\s*(?:\/|per month|monthly)/i.test(pricing(t).details));
  return arr
 }
 function toolGrid(out,items,title){
