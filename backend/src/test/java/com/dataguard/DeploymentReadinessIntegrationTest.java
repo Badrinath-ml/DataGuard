@@ -24,7 +24,6 @@ import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -154,10 +153,13 @@ class DeploymentReadinessIntegrationTest {
         MvcResult download = mockMvc.perform(get("/api/projects/reviews/{reviewId}/download", reviewId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(request().asyncStarted())
-                .andReturn();
-        mockMvc.perform(asyncDispatch(download))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Type", "application/octet-stream"));
+                .andExpect(header().string("Content-Type", "application/octet-stream"))
+                .andReturn();
+        byte[] downloadedZip = download.getResponse().getContentAsByteArray();
+        assertTrue(downloadedZip.length > 4, "The reviewed ZIP must not be empty.");
+        assertEquals((byte) 'P', downloadedZip[0]);
+        assertEquals((byte) 'K', downloadedZip[1]);
     }
 
     @Test
