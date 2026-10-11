@@ -72,47 +72,397 @@ CREATE TABLE IF NOT EXISTS ai_conversation_messages (
 );
 
 -- Add columns introduced after older deployments were first created.
-ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(255);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'users'
+          AND column_name = 'full_name'
+    ) THEN
+        ALTER TABLE users ADD COLUMN full_name VARCHAR(255);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'users'
+          AND column_name = 'email'
+    ) THEN
+        ALTER TABLE users ADD COLUMN email VARCHAR(255);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'users'
+          AND column_name = 'password'
+    ) THEN
+        ALTER TABLE users ADD COLUMN password VARCHAR(255);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'users'
+          AND column_name = 'role'
+    ) THEN
+        ALTER TABLE users ADD COLUMN role VARCHAR(255);
+    END IF;
+END $$;
 
-ALTER TABLE projects ADD COLUMN IF NOT EXISTS name VARCHAR(255);
-ALTER TABLE projects ADD COLUMN IF NOT EXISTS technology VARCHAR(255);
-ALTER TABLE projects ADD COLUMN IF NOT EXISTS user_id BIGINT;
-ALTER TABLE projects ADD COLUMN IF NOT EXISTS created_at TIMESTAMP;
-ALTER TABLE projects ADD COLUMN IF NOT EXISTS last_quality_score INTEGER;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'projects'
+          AND column_name = 'name'
+    ) THEN
+        ALTER TABLE projects ADD COLUMN name VARCHAR(255);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'projects'
+          AND column_name = 'technology'
+    ) THEN
+        ALTER TABLE projects ADD COLUMN technology VARCHAR(255);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'projects'
+          AND column_name = 'user_id'
+    ) THEN
+        ALTER TABLE projects ADD COLUMN user_id BIGINT;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'projects'
+          AND column_name = 'created_at'
+    ) THEN
+        ALTER TABLE projects ADD COLUMN created_at TIMESTAMP;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'projects'
+          AND column_name = 'last_quality_score'
+    ) THEN
+        ALTER TABLE projects ADD COLUMN last_quality_score INTEGER;
+    END IF;
+END $$;
 
-ALTER TABLE reviews ADD COLUMN IF NOT EXISTS project_id BIGINT;
-ALTER TABLE reviews ADD COLUMN IF NOT EXISTS quality_score INTEGER;
-ALTER TABLE reviews ADD COLUMN IF NOT EXISTS review_date TIMESTAMP;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'reviews'
+          AND column_name = 'project_id'
+    ) THEN
+        ALTER TABLE reviews ADD COLUMN project_id BIGINT;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'reviews'
+          AND column_name = 'quality_score'
+    ) THEN
+        ALTER TABLE reviews ADD COLUMN quality_score INTEGER;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'reviews'
+          AND column_name = 'review_date'
+    ) THEN
+        ALTER TABLE reviews ADD COLUMN review_date TIMESTAMP;
+    END IF;
+END $$;
 
-ALTER TABLE findings ADD COLUMN IF NOT EXISTS review_id BIGINT;
-ALTER TABLE findings ADD COLUMN IF NOT EXISTS category VARCHAR(255);
-ALTER TABLE findings ADD COLUMN IF NOT EXISTS severity VARCHAR(255);
-ALTER TABLE findings ADD COLUMN IF NOT EXISTS title VARCHAR(255);
-ALTER TABLE findings ADD COLUMN IF NOT EXISTS file_path VARCHAR(255);
-ALTER TABLE findings ADD COLUMN IF NOT EXISTS line_number INTEGER;
-ALTER TABLE findings ADD COLUMN IF NOT EXISTS evidence VARCHAR(2000);
-ALTER TABLE findings ADD COLUMN IF NOT EXISTS recommendation VARCHAR(2000);
-ALTER TABLE findings ADD COLUMN IF NOT EXISTS status VARCHAR(255);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'findings'
+          AND column_name = 'review_id'
+    ) THEN
+        ALTER TABLE findings ADD COLUMN review_id BIGINT;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'findings'
+          AND column_name = 'category'
+    ) THEN
+        ALTER TABLE findings ADD COLUMN category VARCHAR(255);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'findings'
+          AND column_name = 'severity'
+    ) THEN
+        ALTER TABLE findings ADD COLUMN severity VARCHAR(255);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'findings'
+          AND column_name = 'title'
+    ) THEN
+        ALTER TABLE findings ADD COLUMN title VARCHAR(255);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'findings'
+          AND column_name = 'file_path'
+    ) THEN
+        ALTER TABLE findings ADD COLUMN file_path VARCHAR(255);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'findings'
+          AND column_name = 'line_number'
+    ) THEN
+        ALTER TABLE findings ADD COLUMN line_number INTEGER;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'findings'
+          AND column_name = 'evidence'
+    ) THEN
+        ALTER TABLE findings ADD COLUMN evidence VARCHAR(2000);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'findings'
+          AND column_name = 'recommendation'
+    ) THEN
+        ALTER TABLE findings ADD COLUMN recommendation VARCHAR(2000);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'findings'
+          AND column_name = 'status'
+    ) THEN
+        ALTER TABLE findings ADD COLUMN status VARCHAR(255);
+    END IF;
+END $$;
 
-ALTER TABLE ai_explanations ADD COLUMN IF NOT EXISTS finding_id BIGINT;
-ALTER TABLE ai_explanations ADD COLUMN IF NOT EXISTS explanation TEXT;
-ALTER TABLE ai_explanations ADD COLUMN IF NOT EXISTS impact TEXT;
-ALTER TABLE ai_explanations ADD COLUMN IF NOT EXISTS recommended_action TEXT;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_explanations'
+          AND column_name = 'finding_id'
+    ) THEN
+        ALTER TABLE ai_explanations ADD COLUMN finding_id BIGINT;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_explanations'
+          AND column_name = 'explanation'
+    ) THEN
+        ALTER TABLE ai_explanations ADD COLUMN explanation TEXT;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_explanations'
+          AND column_name = 'impact'
+    ) THEN
+        ALTER TABLE ai_explanations ADD COLUMN impact TEXT;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_explanations'
+          AND column_name = 'recommended_action'
+    ) THEN
+        ALTER TABLE ai_explanations ADD COLUMN recommended_action TEXT;
+    END IF;
+END $$;
 
-ALTER TABLE ai_conversation_sessions ADD COLUMN IF NOT EXISTS session_id UUID;
-ALTER TABLE ai_conversation_sessions ADD COLUMN IF NOT EXISTS user_id BIGINT;
-ALTER TABLE ai_conversation_sessions ADD COLUMN IF NOT EXISTS review_id BIGINT;
-ALTER TABLE ai_conversation_sessions ADD COLUMN IF NOT EXISTS context_type VARCHAR(24) DEFAULT 'CODE_CHECK';
-ALTER TABLE ai_conversation_sessions ADD COLUMN IF NOT EXISTS title VARCHAR(180) DEFAULT 'New scan';
-ALTER TABLE ai_conversation_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_conversation_sessions'
+          AND column_name = 'session_id'
+    ) THEN
+        ALTER TABLE ai_conversation_sessions ADD COLUMN session_id UUID;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_conversation_sessions'
+          AND column_name = 'user_id'
+    ) THEN
+        ALTER TABLE ai_conversation_sessions ADD COLUMN user_id BIGINT;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_conversation_sessions'
+          AND column_name = 'review_id'
+    ) THEN
+        ALTER TABLE ai_conversation_sessions ADD COLUMN review_id BIGINT;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_conversation_sessions'
+          AND column_name = 'context_type'
+    ) THEN
+        ALTER TABLE ai_conversation_sessions ADD COLUMN context_type VARCHAR(24) DEFAULT 'CODE_CHECK';
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_conversation_sessions'
+          AND column_name = 'title'
+    ) THEN
+        ALTER TABLE ai_conversation_sessions ADD COLUMN title VARCHAR(180) DEFAULT 'New scan';
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_conversation_sessions'
+          AND column_name = 'updated_at'
+    ) THEN
+        ALTER TABLE ai_conversation_sessions ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+END $$;
 
-ALTER TABLE ai_conversation_messages ADD COLUMN IF NOT EXISTS session_id BIGINT;
-ALTER TABLE ai_conversation_messages ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'assistant';
-ALTER TABLE ai_conversation_messages ADD COLUMN IF NOT EXISTS content TEXT DEFAULT '';
-ALTER TABLE ai_conversation_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_conversation_messages'
+          AND column_name = 'session_id'
+    ) THEN
+        ALTER TABLE ai_conversation_messages ADD COLUMN session_id BIGINT;
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_conversation_messages'
+          AND column_name = 'role'
+    ) THEN
+        ALTER TABLE ai_conversation_messages ADD COLUMN role VARCHAR(20) DEFAULT 'assistant';
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_conversation_messages'
+          AND column_name = 'content'
+    ) THEN
+        ALTER TABLE ai_conversation_messages ADD COLUMN content TEXT DEFAULT '';
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_conversation_messages'
+          AND column_name = 'created_at'
+    ) THEN
+        ALTER TABLE ai_conversation_messages ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+END $$;
 
 -- Backfill only missing values required by the conversation schema.
 UPDATE ai_conversation_sessions
