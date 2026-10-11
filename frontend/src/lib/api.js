@@ -4,9 +4,13 @@ export function getToken() { const token = authData().token; if (!token) throw n
 async function request(path, options = {}) {
  const token = options.auth === false ? '' : (options.token || getToken());
  const headers = { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...(token ? { Authorization: 'Bearer ' + token } : {}), ...(options.headers || {}) };
- const response = await fetch(API_URL + path, { ...options, headers });
+ let response;
+ try { response = await fetch(API_URL + path, { ...options, headers }); }
+ catch { throw new Error('Cannot reach the DataGuard server. Check your connection and that the backend is running (VITE_API_URL / CORS_ALLOWED_ORIGINS).'); }
  const type = response.headers.get('content-type') || '';
- const body = type.includes('application/json') ? await response.json() : await response.text();
+ if (response.status === 401 && token) { try { localStorage.removeItem('dataguard-auth'); } catch { /* ignore */ } if (typeof window !== 'undefined' && !/^\/(login|register)/.test(window.location.pathname)) window.location.assign('/login'); throw new Error('Your session has expired. Please sign in again.'); }
+ const body = type.includes('application/json') ? await response.json().catch(() => ({})) : await response.text();
+ if (response.ok && typeof body === 'string' && /^\s*<(!doctype|html)/i.test(body)) throw new Error('The API returned a web page instead of data. Set VITE_API_URL to your backend URL (or add an /api proxy redirect) and redeploy the frontend.');
  if (!response.ok) {
    const detail = typeof body === 'string' ? body.trim() : body?.message || body?.error || body?.detail;
    throw new Error(detail || `Request failed (${response.status} ${response.statusText || ''}).`.trim());
