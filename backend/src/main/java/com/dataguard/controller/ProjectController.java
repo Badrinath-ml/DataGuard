@@ -103,17 +103,17 @@ public class ProjectController {
     }
 
     @GetMapping("/reviews/{reviewId}/download")
-    public ResponseEntity<?> downloadReviewedProject(@PathVariable Long reviewId, Authentication authentication) {
+    public ResponseEntity<StreamingResponseBody> downloadReviewedProject(@PathVariable Long reviewId, Authentication authentication) {
         var review = reviewRepository.findById(reviewId).orElse(null);
         if (review == null) return ResponseEntity.notFound().build();
         var project = review.getProject();
         Long projectId = project.getId();
         if (!project.getUser().getEmail().equalsIgnoreCase(authenticationEmail(authentication))) {
-            return ResponseEntity.status(403).body("You do not have access to this project.");
+            return ResponseEntity.status(403).build();
         }
         Path root = Path.of(storageDirectory, "dataguard_" + projectId).toAbsolutePath().normalize();
         if (!Files.isDirectory(root)) {
-            return ResponseEntity.status(410).body("Temporary project files are no longer available. Please upload the ZIP again.");
+            return ResponseEntity.status(410).build();
         }
         String safeName = project.getName() == null ? "dataguard-project" : project.getName().replaceAll("[^A-Za-z0-9_-]", "-");
         StreamingResponseBody stream = output -> {
