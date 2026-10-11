@@ -45,7 +45,10 @@ class AIChatControllerRadarTest {
                   {"name":"DaVinci Resolve","purpose":"Edit video and perform professional colour grading.","pricingType":"FREE_WITH_LIMITS","hasFreePlan":true,"pricingDetails":"Check current plans","url":"https://www.blackmagicdesign.com/products/davinciresolve"},
                   {"name":"VN Video Editor","purpose":"Edit mobile videos using a multitrack timeline.","pricingType":"FREE_ONLY","hasFreePlan":true,"pricingDetails":"Verify current terms","url":"https://www.vlognow.me"},
                   {"name":"Descript","purpose":"Edit audio and video by editing the transcript.","pricingType":"FREEMIUM","hasFreePlan":true,"pricingDetails":"Check current plans","url":"https://www.descript.com"},
-                  {"name":"Adobe Premiere Pro","purpose":"Edit and finish professional video projects.","pricingType":"PAID_SUBSCRIPTION","hasFreePlan":false,"pricingDetails":"Check current plans","url":"https://www.adobe.com/products/premiere.html"}
+                  {"name":"Adobe Premiere Pro","purpose":"Edit and finish professional video projects.","pricingType":"PAID_SUBSCRIPTION","hasFreePlan":false,"pricingDetails":"Check current plans","url":"https://www.adobe.com/products/premiere.html"},
+                  {"name":"VEED","purpose":"Edit browser-based videos and add subtitles.","pricingType":"FREEMIUM","hasFreePlan":true,"pricingDetails":"Check current plans","url":"https://www.veed.io"},
+                  {"name":"Runway","purpose":"Generate and edit videos with AI-assisted tools.","pricingType":"FREEMIUM","hasFreePlan":true,"pricingDetails":"Check current plans","url":"https://runwayml.com"},
+                  {"name":"Adobe Express","purpose":"Create short social videos and branded content.","pricingType":"FREEMIUM","hasFreePlan":true,"pricingDetails":"Check current plans","url":"https://www.adobe.com/express"}
                 ]}
                 """);
         when(sessions.save(any(AIConversationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
