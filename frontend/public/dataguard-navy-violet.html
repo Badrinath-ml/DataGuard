@@ -515,15 +515,52 @@ ring(0);
     if (!response.ok) throw new Error(typeof body === 'string' ? (body || 'Request failed (' + response.status + ')') : body.message || body.error || 'Request failed (' + response.status + ')');
     return body;
   }
+  function chatSessionStorageKey() {
+    const email = String(session().email || '').trim().toLowerCase();
+    return email ? 'dataguard-chat-session:' + email : null;
+  }
   async function loadChatHistory() {
     if (!token()) return;
+    const key = chatSessionStorageKey();
+    let sessionId = null;
+    let result = null;
+    if (key) {
+      try { sessionId = localStorage.getItem(key); } catch (_) {}
+    }
+    if (sessionId) {
+      try {
+        result = await api('/api/ai/chat/history?sessionId=' + encodeURIComponent(sessionId));
+      } catch (_) {
+        sessionId = null;
+        if (key) { try { localStorage.removeItem(key); } catch (_) {} }
+      }
+    }
     try {
-      const result = await api('/api/ai/chat/history');
-      chatSessionId = result.sessionId || null;
+      if (!result) {
+        const sessions = await api('/api/ai/chat/sessions');
+        const existing = Array.isArray(sessions)
+          ? sessions.find(item => String(item.contextType || 'CODE_CHECK').toUpperCase() !== 'AI_RADAR')
+          : null;
+        if (existing && existing.sessionId) {
+          sessionId = existing.sessionId;
+        } else {
+          const created = await api('/api/ai/chat/sessions', {
+            method: 'POST',
+            body: JSON.stringify({ title: 'AI Assistant' })
+          });
+          sessionId = created.sessionId;
+        }
+        if (!sessionId) throw new Error('The server did not return a chat session ID.');
+        result = await api('/api/ai/chat/history?sessionId=' + encodeURIComponent(sessionId));
+        if (key) { try { localStorage.setItem(key, sessionId); } catch (_) {} }
+      }
+      chatSessionId = result.sessionId || sessionId || null;
       chatHistory = Array.isArray(result.messages) ? result.messages : [];
+      msgs.replaceChildren();
       restoreChat();
     } catch (error) {
       console.error('Could not load AI conversation history:', error);
+      chatSessionId = null;
     }
   }
   function showError(id, message) { const node = $id(id); if (node) { node.textContent = message || ''; node.style.color = message ? 'var(--bad)' : ''; } }
@@ -531,10 +568,12 @@ ring(0);
   function applySession(auth) {
     localStorage.setItem('dataguard-auth', JSON.stringify(auth));
     loggedIn = true; user = userFromAuth(auth); pending = pending || 'check';
+    chatHistory = []; chatSessionId = null; msgs.replaceChildren();
     if (typeof P !== 'undefined') { P.name = user.n; try { localStorage.setItem('dg-prefs', JSON.stringify(P)); } catch (_) {} }
     if (typeof upd === 'function') upd();
     const destination = pending || 'check'; pending = null;
     go(destination);
+    loadChatHistory();
   }
   async function submitAuth(mode) {
     const register = mode === 'register';
@@ -563,6 +602,7 @@ ring(0);
   }
   window.signOutUser = function () {
     localStorage.removeItem('dataguard-auth'); loggedIn = false; user = null; pending = null;
+    chatHistory = []; chatSessionId = null; msgs.replaceChildren();
     document.dispatchEvent(new Event('dataguard:radar-signed-out'));
     show('home'); if (typeof upd === 'function') upd(); go('home');
   };
