@@ -16,9 +16,6 @@ public record ReviewResponse(
         List<FindingResponse> findings) {
 
     public static ReviewResponse from(Review review, List<Finding> findings) {
-        List<FindingResponse> responseFindings = findings.stream()
-                .map(FindingResponse::from)
-                .toList();
         return from(review, findings, null, null);
     }
 
