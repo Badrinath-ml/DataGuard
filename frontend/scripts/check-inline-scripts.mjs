@@ -34,7 +34,7 @@ if (!html.includes("document.querySelectorAll('.fc.su [data-login]')")) {
 if (!html.includes("if(navReg){navReg.textContent") || !html.includes("if(usrE)usrE.textContent")) {
   throw new Error('Auth/profile UI updates must guard optional DOM elements before writing textContent.');
 }
-if (html.split('\\n').some((line) => line.trim() === 'run();')) {
+if (html.split('\n').some((line) => line.trim() === 'run();')) {
   throw new Error('The legacy demo scan must not run automatically on page load.');
 }
 
