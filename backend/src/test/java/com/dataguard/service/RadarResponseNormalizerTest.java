@@ -38,6 +38,20 @@ class RadarResponseNormalizerTest {
     }
 
     @Test
+    void rejectsRecommendationHeadingsMasqueradingAsProductNames() {
+        Map<String, Object> input = Map.of("tools", List.of(
+                tool("Define the medium", "Decide whether the work is text, image, audio, or video.", "UNKNOWN", null),
+                tool("Consider workflow integration", "Check whether the tool fits the workflow already in use.", "UNKNOWN", null),
+                tool("Check data-privacy needs", "Review the data policy before uploading private files.", "UNKNOWN", null),
+                tool("No subscription", "An advice label rather than a software product.", "UNKNOWN", null),
+                tool("Full control", "A general feature label rather than a named product.", "UNKNOWN", null)
+        ));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> normalizer.normalize(input, "find", "AI editing tools"));
+    }
+
+    @Test
     void rejectsFindResponseWithoutEnoughRealProducts() {
         Map<String, Object> input = Map.of("tools", List.of(
                 tool("Length & Style", "Choose an editing style.", "UNKNOWN", null),
