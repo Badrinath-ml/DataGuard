@@ -77,10 +77,28 @@ class DeploymentReadinessIntegrationTest {
                 .path("token").asText();
         assertFalse(loginToken.isBlank());
 
+        mockMvc.perform(get("/api/ai/chat/sessions"))
+                .andExpect(status().is4xxClientError());
+
         mockMvc.perform(get("/api/ai/chat/sessions")
                         .header("Authorization", "Bearer " + loginToken))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]"));
+
+        MvcResult createdSession = mockMvc.perform(post("/api/ai/chat/sessions")
+                        .header("Authorization", "Bearer " + loginToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Integration chat\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sessionId").isNotEmpty())
+                .andReturn();
+        String sessionId = objectMapper.readTree(createdSession.getResponse().getContentAsString())
+                .path("sessionId").asText();
+        mockMvc.perform(get("/api/ai/chat/history").param("sessionId", sessionId)
+                        .header("Authorization", "Bearer " + loginToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").value(sessionId))
+                .andExpect(jsonPath("$.messages").isArray());
 
         mockMvc.perform(options("/api/auth/login")
                         .header("Origin", "http://localhost:5173")
