@@ -48,7 +48,8 @@ class AIChatControllerRadarTest {
                   {"name":"Adobe Premiere Pro","purpose":"Edit and finish professional video projects.","pricingType":"PAID_SUBSCRIPTION","hasFreePlan":false,"pricingDetails":"Check current plans","url":"https://www.adobe.com/products/premiere.html"},
                   {"name":"VEED","purpose":"Edit browser-based videos and add subtitles.","pricingType":"FREEMIUM","hasFreePlan":true,"pricingDetails":"Check current plans","url":"https://www.veed.io"},
                   {"name":"Runway","purpose":"Generate and edit videos with AI-assisted tools.","pricingType":"FREEMIUM","hasFreePlan":true,"pricingDetails":"Check current plans","url":"https://runwayml.com"},
-                  {"name":"Adobe Express","purpose":"Create short social videos and branded content.","pricingType":"FREEMIUM","hasFreePlan":true,"pricingDetails":"Check current plans","url":"https://www.adobe.com/express"}
+                  {"name":"Adobe Express","purpose":"Create short social videos and branded content.","pricingType":"FREEMIUM","hasFreePlan":true,"pricingDetails":"Check current plans","url":"https://www.adobe.com/express"},
+                  {"name":"Clipchamp","purpose":"Edit videos in a browser with templates and captions.","pricingType":"FREEMIUM","hasFreePlan":true,"pricingDetails":"Check current plans","url":"https://clipchamp.com"}
                 ]}
                 """);
         when(sessions.save(any(AIConversationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
