@@ -1,6 +1,9 @@
 package com.dataguard.security;
 
 import com.dataguard.repository.UserRepository;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -60,14 +63,27 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/error").permitAll()
                 .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated())
+            .exceptionHandling(errors -> errors
+                .authenticationEntryPoint((request, response, exception) ->
+                        writeJson(response, 401, "Your session has expired. Please sign in again."))
+                .accessDeniedHandler((request, response, exception) ->
+                        writeJson(response, 403, "You do not have permission to perform this action.")))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    private static void writeJson(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setContentType("application/json");
+        response.getWriter().write("{\"message\":\"" + message + "\"}");
     }
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, UserRepository userRepository) {

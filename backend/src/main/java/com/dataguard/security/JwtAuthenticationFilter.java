@@ -19,6 +19,8 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
@@ -50,7 +52,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
-        } catch (JwtException | IllegalArgumentException exception) {
+        } catch (RuntimeException exception) {
+            // JwtException, unknown user, bad role data, etc. Log only the exception type (never the token).
+            log.warn("Rejected bearer token for {} {} ({})", request.getMethod(), request.getRequestURI(),
+                    exception.getClass().getSimpleName());
             // Ignore invalid/expired tokens here; protected endpoints will remain unauthenticated
             // and be rejected by Spring Security with the normal authorization response.
             SecurityContextHolder.clearContext();
