@@ -20,18 +20,6 @@ public class ApiExceptionHandler {
                 .body(Map.of("message", "ZIP files must be 25 MB or smaller."));
     }
 
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<Map<String, String>> handleUnavailableComponent(IllegalStateException exception) {
-        log.warn("A configured DataGuard component could not complete the request ({})",
-                exception.getClass().getSimpleName());
-        String message = exception.getMessage();
-        if (message == null || message.isBlank()) {
-            message = "A configured review or AI component is unavailable. Check backend configuration and logs.";
-        }
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(Map.of("message", message));
-    }
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleUnexpectedError(Exception exception) {
         log.error("Unhandled DataGuard API error ({})", exception.getClass().getSimpleName());
