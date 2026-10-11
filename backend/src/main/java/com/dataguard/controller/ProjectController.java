@@ -94,7 +94,7 @@ public class ProjectController {
                 files = allFiles.size();
                 for (Path path : allFiles) {
                     String name = path.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
-                    if (!name.matches(".*\\\\.(java|js|jsx|ts|tsx|py|html|css|json|ya?ml|xml|sql|md)$")) continue;
+                    if (!name.matches(".*\\.(java|js|jsx|ts|tsx|py|html|css|json|ya?ml|xml|sql|md)$")) continue;
                     try (var reader = Files.lines(path, StandardCharsets.UTF_8)) {
                         lines += reader.count();
                     } catch (IOException ignored) {
