@@ -374,7 +374,7 @@ public class AIChatController {
             return ResponseEntity.badRequest().body(Map.of("message", "Category filters must be 60 characters or fewer."));
         }
         if (request.budget() != null && !request.budget().isBlank()
-                && !List.of("free", "paid", "any").contains(request.budget().trim().toLowerCase())) {
+                && !List.of("free", "paid", "any", "any price", "all").contains(request.budget().trim().toLowerCase())) {
             return ResponseEntity.badRequest().body(Map.of("message", "Budget must be free, paid, or any."));
         }
         if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
