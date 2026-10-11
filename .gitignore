@@ -7,3 +7,5 @@ semgrep-results.json
 *.log
 *.zip
 .DS_Store
+dataguard-storage/
+backend/dataguard-storage/
