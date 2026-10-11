@@ -12,20 +12,25 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import java.util.Map;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
 @EnabledIfEnvironmentVariable(named = "DATAGUARD_INTEGRATION_TESTS", matches = "true")
 class DeploymentReadinessIntegrationTest {
 
@@ -107,4 +112,76 @@ class DeploymentReadinessIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
     }
+
+    @Test
+    void zipUploadStoresRealReviewAndAllowsOwnerToDownloadIt() throws Exception {
+        String email = "upload-" + UUID.randomUUID() + "@example.com";
+        String token = registerAndGetToken("Upload Integration", email, "Correct-Horse-Battery-42");
+        byte[] archive = createZip("src/App.java",
+                "public class App {\n  public void run() { System.out.println(\"hello\"); }\n}\n");
+
+        MvcResult uploaded = mockMvc.perform(multipart("/api/projects/upload")
+                        .file(new MockMultipartFile("file", "sample.zip", "application/zip", archive))
+                        .param("name", "sample-project")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.projectName").value("sample-project"))
+                .andExpect(jsonPath("$.qualityScore").isNumber())
+                .andExpect(jsonPath("$.findings").isArray())
+                .andExpect(jsonPath("$.findings.length()").value(1))
+                .andReturn();
+
+        long reviewId = objectMapper.readTree(uploaded.getResponse().getContentAsString()).path("id").asLong();
+        mockMvc.perform(get("/api/projects/reviews")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(reviewId));
+
+        mockMvc.perform(get("/api/projects/reviews/{reviewId}/download", reviewId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/zip"));
+    }
+
+    @Test
+    void invalidZipIsRejectedAndDoesNotCreateAProjectRecord() throws Exception {
+        String email = "invalid-zip-" + UUID.randomUUID() + "@example.com";
+        String token = registerAndGetToken("Invalid ZIP Test", email, "Correct-Horse-Battery-42");
+        Integer before = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM projects", Integer.class);
+        byte[] archive = createZip("../outside.txt", "should not be extracted");
+
+        mockMvc.perform(multipart("/api/projects/upload")
+                        .file(new MockMultipartFile("file", "unsafe.zip", "application/zip", archive))
+                        .param("name", "unsafe-project")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").exists());
+
+        Integer after = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM projects", Integer.class);
+        assertEquals(before, after, "Failed archive extraction must roll back the project row");
+    }
+
+    private String registerAndGetToken(String name, String email, String password) throws Exception {
+        String body = objectMapper.writeValueAsString(Map.of(
+                "fullName", name, "email", email, "password", password));
+        MvcResult result = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).path("token").asText();
+    }
+
+    private byte[] createZip(String entryName, String content) throws Exception {
+        try (ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+             ZipOutputStream zip = new ZipOutputStream(bytes)) {
+            zip.putNextEntry(new ZipEntry(entryName));
+            zip.write(content.getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+            zip.finish();
+            return bytes.toByteArray();
+        }
+    }
+
 }
