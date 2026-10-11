@@ -5,6 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientResponseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
 import java.util.ArrayList;
@@ -13,6 +16,7 @@ import java.util.Map;
 
 @Component
 public class GroqChatProvider implements RadarChatProvider {
+    private static final Logger log = LoggerFactory.getLogger(GroqChatProvider.class);
     private final RestClient groqClient;
     private final RestClient geminiClient;
     private final String groqApiKey;
@@ -65,6 +69,7 @@ public class GroqChatProvider implements RadarChatProvider {
                 return completeWithGroq(messages, jsonMode);
             } catch (RuntimeException ex) {
                 groqFailure = ex;
+                logProviderFailure("Groq", ex);
             }
         }
 
@@ -72,6 +77,7 @@ public class GroqChatProvider implements RadarChatProvider {
             try {
                 return completeWithGemini(turns, jsonMode);
             } catch (RuntimeException geminiFailure) {
+                logProviderFailure("Gemini", geminiFailure);
                 if (groqFailure != null) geminiFailure.addSuppressed(groqFailure);
                 throw new IllegalStateException("Both AI providers failed. Check Groq/Gemini quota, key, model, and backend logs.", geminiFailure);
             }
@@ -81,6 +87,23 @@ public class GroqChatProvider implements RadarChatProvider {
             throw new IllegalStateException("Groq request failed and GEMINI_API_KEY is not configured for fallback.", groqFailure);
         }
         throw new IllegalStateException("No AI provider is configured. Set GROQ_API_KEY and/or GEMINI_API_KEY in the backend environment.");
+    }
+
+    private void logProviderFailure(String providerName, RuntimeException failure) {
+        Throwable cause = failure;
+        while (cause != null) {
+            if (cause instanceof RestClientResponseException response) {
+                int status = response.getStatusCode().value();
+                String category = status == 401 || status == 403 ? "authentication/configuration"
+                        : status == 429 ? "rate-limit-or-quota"
+                        : status >= 500 ? "provider-server-error" : "request-rejected";
+                // Log only HTTP status/category. Response messages and request URLs can contain credentials.
+                log.warn("{} API request failed with HTTP {} ({})", providerName, status, category);
+                return;
+            }
+            cause = cause.getCause();
+        }
+        log.warn("{} API request failed ({})", providerName, failure.getClass().getSimpleName());
     }
 
     private String completeWithGroq(List<Map<String, String>> messages, boolean jsonMode) {
