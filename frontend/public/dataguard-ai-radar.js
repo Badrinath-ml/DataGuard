@@ -261,9 +261,12 @@ async function openHistory(id){
   const u=[...messages].reverse().find(m=>m.role==='user'),a=[...messages].reverse().find(m=>m.role==='assistant');
   lastPrompt=u?String(u.content||''):'';if($('#fq'))$('#fq').value=lastPrompt;if($('#wq'))$('#wq').value=lastPrompt;
   const saved=a?parseJson(a.content):null;
-  if(saved&&saved.error){out.replaceChildren(el(saved.message||'This Radar request did not complete. You can retry it using the prompt above.','d18-error'));prependConversationHistory(out,messages);return}
   if(!saved)throw Error('The saved AI response is not structured. Start a new request to regenerate it.');
-  const mode=saved.radarMode||((Array.isArray(saved.steps)||Array.isArray(saved.workflow))?'workflow':'find');lastMode=mode;lastResult=saved;
+  const mode=saved.radarMode||((Array.isArray(saved.steps)||Array.isArray(saved.workflow))?'workflow':'find');lastMode=mode;
+  if($('#pf'))$('#pf').hidden=mode!=='find';if($('#pw'))$('#pw').hidden=mode!=='workflow';
+  $('.seg button[data-m]').forEach(b=>b.classList.toggle('on',b.dataset.m===mode||(mode==='workflow'&&b.dataset.m==='flow')));
+  if(saved.error){out.replaceChildren(el(saved.message||'This Radar request did not complete. You can retry it using the prompt above.','d18-error'));prependConversationHistory(out,messages);return}
+  lastResult=saved;
   if(mode==='workflow'){if(!Array.isArray(saved.steps)&&Array.isArray(saved.workflow))saved.steps=saved.workflow;renderWorkflow(saved)}else renderTools(saved,true);
   prependConversationHistory(out,messages);
   if($('#pf'))$('#pf').hidden=mode!=='find';if($('#pw'))$('#pw').hidden=mode!=='workflow';
@@ -273,12 +276,12 @@ async function openHistory(id){
 function handleClick(event){
  const t=event.target instanceof Element?event.target:null;if(!t)return;
  const find=t.closest('#ff'),workflow=t.closest('#wf'),quick=t.closest('.pl2 button'),workflowQuick=t.closest('#sgs .ch'),budgetButton=t.closest('.opts .ch[data-g="b"]');
- if(t.closest('[data-radar-more]')){event.preventDefault();event.stopImmediatePropagation();const button=t.closest('[data-radar-more]');findVisibleCount=button.dataset.radarMore==='more'?findVisibleCount+9:9;if(lastResult)renderTools(lastResult);return}
+ if(t.closest('[data-radar-more]')){event.preventDefault();event.stopImmediatePropagation();const button=t.closest('[data-radar-more]');findVisibleCount=button.dataset.radarMore==='more'?findVisibleCount+9:9;if(lastResult){renderTools(lastResult);prependConversationHistory($('#out'),activeRadarTranscript)}return}
  if(find){event.preventDefault();event.stopImmediatePropagation();const c=$('#cats .on');run('find',($('#fq')&&$('#fq').value.trim())||(c?c.textContent.trim()+' tools':''));return}
  if(workflow){event.preventDefault();event.stopImmediatePropagation();run('workflow',$('#wq')?$('#wq').value.trim():'');return}
  if(workflowQuick){event.preventDefault();event.stopImmediatePropagation();const prompt=workflowQuick.textContent.trim();if($('#wq'))$('#wq').value=prompt;run('workflow',prompt);return}
  if(quick){event.preventDefault();event.stopImmediatePropagation();const wf=$('#pw')&&!$('#pw').hidden,s=quick.dataset.x||quick.textContent.trim();run(wf?'workflow':'find',wf?s:(($('#fq')&&$('#fq').value.trim())?$('#fq').value.trim()+' '+s:s));return}
- if(budgetButton){event.preventDefault();event.stopImmediatePropagation();$$('.opts .ch[data-g="b"]').forEach(b=>b.classList.toggle('on',b===budgetButton));if(lastResult){if(lastMode==='workflow')renderWorkflow(lastResult);else renderTools(lastResult,true)}}
+ if(budgetButton){event.preventDefault();event.stopImmediatePropagation();$$('.opts .ch[data-g="b"]').forEach(b=>b.classList.toggle('on',b===budgetButton));if(lastResult){if(lastMode==='workflow')renderWorkflow(lastResult);else renderTools(lastResult,true);prependConversationHistory($('#out'),activeRadarTranscript)}}
 }
 function handleKey(event){
  const t=event.target;if(!t||!['fq','wq'].includes(t.id)||event.key!=='Enter'||(t.id==='fq'&&event.shiftKey))return;
