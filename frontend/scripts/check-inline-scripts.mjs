@@ -38,7 +38,7 @@ const legacyRadarScripts = [
   '../public/dataguard-followup-fixes.js',
   '../public/dataguard-pr17-fixes.js',
 ].map((path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8'));
-if (radar.includes("$('.seg button[data-m]').forEach")) {
+if (/(?<!\\$)\\$\\('.seg button\\[data-m\\]'\\)\\.forEach/.test(radar)) {
   throw new Error('Radar history restoration must use the multi-element selector for segment buttons.');
 }
 if (legacyRadarScripts.some((script) => /wireUpload\(\);wireRadar\(\)/.test(script))) {
