@@ -74,6 +74,22 @@ On the **backend hosting service**, set `CORS_ALLOWED_ORIGINS` to the exact fron
 
 The backend defaults intentionally allow only local Vite origins. If frontend and backend use separate hosts, leaving out the deployed frontend origin will cause the browser to block the login response with a CORS error. CORS does not replace JWT authentication: login/register remain public routes, and protected API routes continue to require the backend-issued Bearer token. Keep database credentials, `JWT_SECRET`, and AI-provider keys on the backend only.
 
+## Deploy frontend to Netlify and backend to Render
+
+This repository includes a root `netlify.toml` for the Vite frontend. For a split frontend/backend deployment:
+
+1. **Backend on Render:** create a Web Service using Docker. Set the Dockerfile path to `backend/Dockerfile` and Docker context to `backend`. Set the health-check path to `/api/health`.
+2. **Frontend on Netlify:** import this repository; the root `netlify.toml` sets the frontend base directory, build command, and publish directory.
+3. **Backend environment variables:** set `DB_URL` (the Aiven JDBC URL with `sslmode=require`), `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`, and at least one of `GROQ_API_KEY` or `GEMINI_API_KEY`. Never add these secrets to Netlify.
+4. **Frontend environment variable:** in Netlify's build environment, set `VITE_API_URL` to the public backend base URL, with no trailing `/api` suffix. Trigger a new frontend build after setting it.
+5. **CORS:** set backend `CORS_ALLOWED_ORIGINS` to the exact Netlify site origin (for example, `https://your-site.netlify.app`). Include any custom domain you use. Do not use `*`.
+6. **Persistent project files:** set `DATAGUARD_STORAGE_DIR=/var/data/dataguard` and attach a persistent disk at that mount path on the backend host. Without durable storage, uploaded source files may not survive a restart, so historical downloads/fixes can return “files unavailable.”
+7. **Database migration:** back up the existing Aiven database before the first production rollout. Verify `/api/health` after deployment; it must return `UP` with the database marked `UP`.
+
+The backend Docker image includes Semgrep and enables it by default. Its first deployment/build requires outbound package access; scans also need outbound HTTPS to fetch the configured rule pack. If you do not want Semgrep in the first rollout, set `SEMGREP_ENABLED=false` on the backend service while keeping the deterministic analyzers enabled.
+
+**Important:** the exact public URLs are created by your hosting providers, so the example origins above must be replaced with your real Netlify and Render URLs before testing sign-in. CI cannot verify provider secrets, Aiven connectivity, or the live AI quota.
+
 ## Expected flow
 1. Register with a valid name, email, and password.
 2. Spring Boot validates the data, stores the BCrypt password hash in Aiven PostgreSQL, and returns a JWT.
