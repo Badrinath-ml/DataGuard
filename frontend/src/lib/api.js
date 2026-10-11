@@ -32,3 +32,4 @@ export function createChatSession(title,reviewId=null) { return request('/api/ai
 export function getChatHistory(id) { return request('/api/ai/chat/history?sessionId='+encodeURIComponent(id)); }
 export function sendChatMessage(message,sessionId) { return request('/api/ai/chat',{method:'POST',body:JSON.stringify({message,sessionId})}); }
 export function sendRadarPrompt(prompt,mode,category,budget,sessionId=null) { return request('/api/ai/radar',{method:'POST',body:JSON.stringify({prompt,mode,category,budget,sessionId})}); }
+export function deleteChatSession(id) { return request('/api/ai/chat/sessions/'+encodeURIComponent(id),{method:'DELETE'}); }

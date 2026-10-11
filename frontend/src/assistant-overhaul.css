@@ -39,3 +39,52 @@
 .dg-dark .dg-assistant-welcome-icon{background:#2d2650;color:#c7b8ff;}
 .dg-dark .dg-assistant-popover .dg-chat-form input{background:#2d2650;border-color:#40375f;color:#f2efff;}
 .dg-dark .dg-assistant-popover .dg-chat-form input::placeholder{color:#9a95bd;}
+
+/* Compact, calmer history rows and useful delete affordances */
+.dg-radar-history-item{display:flex;align-items:center;gap:4px;margin:2px 0;border-radius:10px;}
+.dg-radar-history-item>button:first-child{min-width:0;flex:1;text-align:left;padding:8px 9px;border:0;background:transparent;color:inherit;display:flex;flex-direction:column;gap:3px;border-radius:8px;}
+.dg-radar-history-item>button:first-child span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;}
+.dg-radar-history-item>button:first-child small{font-size:11px;opacity:.7;}
+.dg-radar-history-item.active,.dg-radar-history-item:hover{background:rgba(124,92,246,.09);}
+.dg-delete-history{opacity:0;flex:none;border:0;background:transparent;color:#8b83a8;padding:7px;border-radius:7px;cursor:pointer;}
+.dg-radar-history-item:hover .dg-delete-history,.dg-radar-history-item:focus-within .dg-delete-history{opacity:1;}
+.dg-delete-history:hover{background:#fee9e9;color:#bd3434;}
+.dg-review-chat-expanded{position:fixed!important;z-index:25;inset:18px 20px 18px max(20px,calc((100vw - 1100px)/2))!important;display:flex!important;flex-direction:column;max-height:none!important;margin:0!important;border:1px solid #ddd5f4!important;border-radius:18px!important;box-shadow:0 24px 90px rgba(28,19,54,.28)!important;background:#fff!important;}
+.dg-review-chat-expanded .dg-chat-messages{flex:1;min-height:0;max-height:none!important;overflow-y:auto!important;}
+.dg-chat-expand{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;border:0;background:transparent;text-align:left;cursor:pointer;color:inherit;}
+.dg-expand-label{font-size:12px;color:#7862ce;font-weight:650;margin-left:auto;white-space:nowrap;}
+.dg-review-chat-expanded .dg-chat-heading{flex:none;}
+.dg-review-chat-expanded .dg-chat-form{flex:none;}
+.dg-dark .dg-review-chat-expanded{background:#211b38!important;color:#f2efff!important;border-color:#40375f!important;}
+.dg-dark .dg-review-chat-expanded .dg-chat-messages{background:#211b38!important;}
+@media(max-width:700px){.dg-review-chat-expanded{inset:8px!important;border-radius:12px!important;}.dg-delete-history{opacity:1;}}
+
+.dg-chat-heading-copy{display:flex;align-items:center;gap:12px;min-width:0;text-align:left;}
+.dg-chat-heading-copy>span:last-child{display:flex;flex-direction:column;gap:4px;}
+.dg-chat-heading-copy small{font-size:12px;color:#77738e;font-weight:400;}
+.dg-chat-heading-actions{display:flex;align-items:center;gap:14px;}
+.dg-delete-current-chat{display:inline-flex;align-items:center;gap:5px;color:#958ba9;font-size:12px;cursor:pointer;white-space:nowrap;}
+.dg-delete-current-chat:hover{color:#bd3434;}
+.dg-markdown{font-size:14px;line-height:1.7;overflow-wrap:anywhere;color:inherit;}
+.dg-markdown p{margin:0 0 10px;white-space:pre-wrap;}
+.dg-markdown p:last-child{margin-bottom:0;}
+.dg-markdown h1,.dg-markdown h2,.dg-markdown h3,.dg-markdown h4{margin:16px 0 8px;line-height:1.3;color:inherit;}
+.dg-markdown h1{font-size:1.35em}.dg-markdown h2{font-size:1.22em}.dg-markdown h3{font-size:1.1em}.dg-markdown h4{font-size:1em}
+.dg-markdown ul,.dg-markdown ol{margin:8px 0 12px;padding-left:24px;}
+.dg-markdown li{margin:4px 0;}
+.dg-markdown code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em;background:rgba(124,92,246,.1);padding:2px 5px;border-radius:5px;}
+.dg-markdown pre{overflow:auto;padding:13px 15px;border-radius:10px;background:#211b38;color:#f5f1ff;margin:10px 0 14px;}
+.dg-markdown pre code{padding:0;background:transparent;color:inherit;white-space:pre;}
+.dg-markdown a{color:#7454e8;text-decoration:underline;text-underline-offset:2px;}
+.dg-dark .dg-markdown a{color:#b9a7ff;}
+
+/* AI Radar keeps its original compact floating-assistant interaction. */
+.dg-radar-assistant-backdrop{position:fixed;inset:0;z-index:30;background:transparent;pointer-events:none;}
+.dg-radar-assistant-backdrop .dg-assistant-popover{pointer-events:auto;position:fixed;inset:auto 24px 82px auto;width:min(410px,calc(100vw - 28px));height:min(500px,calc(100dvh - 110px));max-height:calc(100dvh - 110px);border-radius:20px;}
+.dg-radar-assistant-backdrop .dg-popover-head{min-height:58px;padding:13px 16px;font-size:14px;}
+.dg-radar-assistant-backdrop .dg-popover-messages{padding:14px;}
+.dg-radar-assistant-backdrop .dg-assistant-welcome{margin:24px auto 16px;}
+.dg-radar-assistant-backdrop .dg-assistant-welcome h2{font-size:23px;}
+.dg-radar-assistant-backdrop .dg-assistant-suggestions{gap:7px;margin-top:18px;}
+.dg-radar-assistant-backdrop .dg-assistant-suggestions button{padding:8px 10px;font-size:12px;}
+@media(max-width:600px){.dg-radar-assistant-backdrop .dg-assistant-popover{inset:auto 8px 74px 8px;width:auto;height:min(72dvh,560px);max-height:calc(100dvh - 88px);}}
