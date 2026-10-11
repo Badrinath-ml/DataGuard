@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import NavyVioletPrototype from './pages/NavyVioletPrototype';
 import CodeCheck from './pages/CodeCheck';
 import AIRadar from './pages/AIRadar';
+import AIAssistant from './pages/AIAssistant';
 import Diagnostics from './pages/Diagnostics';
 
 function signedIn() {
@@ -20,6 +21,7 @@ export default function App() {
     <Route path="/dashboard" element={<Protected><CodeCheck /></Protected>} />
     <Route path="/code-check" element={<Protected><CodeCheck /></Protected>} />
     <Route path="/ai-radar" element={<Protected><AIRadar /></Protected>} />
+    <Route path="/ai-assistant" element={<Protected><AIAssistant /></Protected>} />
     <Route path="/diagnostics" element={<Diagnostics />} />
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes></BrowserRouter>;
