@@ -52,7 +52,7 @@ public class RadarResponseNormalizer {
             String action = text(map.get("action"), map.get("description"), map.get("details"),
                     map.get("instruction"), map.get("purpose"));
             String title = text(map.get("title"), map.get("name"));
-            if (action.length() < 18 || isEditorialName(title)) continue;
+            if (action.length() < 18 || (!title.isBlank() && isEditorialName(title))) continue;
             if (title.isBlank() || title.matches("(?i)^step\\s*\\d+$")) title = deriveTitle(action, steps.size());
             Map<String, Object> step = new LinkedHashMap<>();
             step.put("title", title);
@@ -92,6 +92,13 @@ public class RadarResponseNormalizer {
         }
         if (recommended.size() < 3) {
             throw new IllegalArgumentException("The AI response did not include at least three usable named tools for the workflow.");
+        }
+        for (int i = 0; i < steps.size(); i++) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> stepTools = (List<Map<String, Object>>) steps.get(i).get("tools");
+            if (stepTools == null || stepTools.isEmpty()) {
+                steps.get(i).put("tools", List.of(recommended.get(i % recommended.size())));
+            }
         }
 
         result.put("steps", steps);
