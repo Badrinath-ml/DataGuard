@@ -74,6 +74,10 @@ public class ProjectController {
         } catch (IOException exception) {
             return ResponseEntity.internalServerError()
                     .body(Map.of("message", "The server could not read or store the uploaded ZIP."));
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.status(503)
+                    .body(Map.of("message", exception.getMessage() == null
+                            ? "The configured review engine is unavailable. Check backend logs." : exception.getMessage()));
         }
     }
 
