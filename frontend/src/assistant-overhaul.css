@@ -131,3 +131,12 @@
 .dg-markdown-table tbody tr:last-child td{border-bottom:0}.dg-markdown-table td:first-child{font-weight:500;}
 @media(max-width:760px){.dg-ai-page{padding:0 10px 12px}.dg-ai-page-header{height:66px;gap:8px}.dg-ai-back{font-size:0;padding:9px}.dg-ai-brand{margin-left:0;margin-right:auto}.dg-ai-brand small{display:none}.dg-ai-new{font-size:0;padding:9px}.dg-ai-metrics{gap:6px;margin:10px auto}.dg-ai-metrics article{padding:8px;gap:7px;min-height:62px}.dg-ai-metrics article>span{display:none}.dg-ai-metrics small{font-size:10px}.dg-ai-metrics strong{font-size:14px}.dg-ai-layout{height:calc(100dvh - 165px);min-height:400px;grid-template-columns:116px minmax(0,1fr);gap:7px}.dg-ai-sidebar{padding:7px}.dg-ai-sidebar-title{font-size:10px}.dg-ai-session>button:first-child{padding:8px 4px}.dg-ai-delete{opacity:1;padding:4px}.dg-ai-chat-scroll{padding:16px 12px}.dg-ai-composer{margin:0 8px 8px}.dg-ai-welcome{margin:50px auto 20px}.dg-ai-welcome>div{flex-direction:column}.dg-ai-welcome>div button{width:100%}}
 @media(max-width:420px){.dg-ai-layout{grid-template-columns:95px minmax(0,1fr)}.dg-ai-brand strong{font-size:12px}.dg-ai-metrics article div{min-width:0}.dg-ai-metrics small{overflow-wrap:anywhere}}
+
+.dg-ai-nav{display:flex;align-items:center;gap:5px;}
+.dg-ai-nav button{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;color:#716984;border-radius:9px;padding:9px 11px;font-size:12px;cursor:pointer;white-space:nowrap;}
+.dg-ai-nav button:hover,.dg-ai-nav button.selected{background:#eee8ff;color:#6848d0;}
+.dg-ai-composer{padding-left:52px;}
+.dg-ai-attach{position:absolute;left:11px;top:12px;width:32px;height:34px;display:grid;place-items:center;border:0;border-radius:9px;background:#f0ebff;color:#7655dc;cursor:pointer;}
+.dg-ai-attachment{display:flex;align-items:center;gap:10px;padding:5px 8px;margin-bottom:6px;background:#f5f1ff;border-radius:7px;color:#51446f;font-size:11px;overflow-wrap:anywhere;}
+.dg-ai-attachment button{border:0;background:transparent;color:#7655dc;cursor:pointer;font-size:11px;}
+@media(max-width:760px){.dg-ai-nav{gap:0}.dg-ai-nav button{font-size:0;padding:9px}.dg-ai-nav button svg{width:17px;height:17px}.dg-ai-composer{padding-left:48px;}}
