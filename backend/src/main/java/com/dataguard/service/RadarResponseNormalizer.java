@@ -116,7 +116,7 @@ public class RadarResponseNormalizer {
             if (!isProductName(name) || !seen.add(name.toLowerCase(Locale.ROOT))) continue;
             String purpose = text(map.get("purpose"), map.get("description"), map.get("primaryUse"),
                     map.get("use"), map.get("summary"));
-            if (purpose.isBlank() || isEditorialName(purpose)) continue;
+            if (purpose.isBlank() || purpose.length() < 8) continue;
 
             Map<String, Object> tool = new LinkedHashMap<>();
             tool.put("name", name);
@@ -195,6 +195,6 @@ public class RadarResponseNormalizer {
             if (i > 0) title.append(' ');
             title.append(words[i]);
         }
-        return title.isEmpty() ? "Phase " + (index + 1) : title.toString().replaceAll("[,:;.!]+$", "");
+        return title.length() == 0 ? "Phase " + (index + 1) : title.toString().replaceAll("[,:;.!]+$", "");
     }
 }
