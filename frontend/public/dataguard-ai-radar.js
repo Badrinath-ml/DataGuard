@@ -175,9 +175,10 @@ function renderWorkflow(data){
 }
 function looksLikeProductName(value){
  const name=String(value||'').trim();if(name.length<2||name.length>64)return false;
- if(/^(purpose|features?|pros? and cons?|workflow|step\s*\d+|tools?|ai tools?|recommended tools?|recommended ai tools|conclusion|summary|research|pricing|comparison|product recommendations?)$/i.test(name))return false;
- if(/\b(vs\.?|versus|compare|comparison|length\s*(?:&|and)\s*style|human[- ]like presenters?|automation\s*(?:&|and|vs\.?|versus)\s*manual control|project management software|document editors?|whiteboarding tools?|pricing comparison|top tools|best tools|tool categories|bulk personalization|commercial licensing|data privacy|gpu requirements?|full control|resolution\s*(?:&|and)\s*export limits?|turn existing text|subscription|workflow phase)\b/i.test(name))return false;
- if(name.split(/\s+/).length>7)return false;
+ if(/^(purpose|features?|pros? and cons?|workflow|step\\s*\\d+|tools?|ai tools?|recommended tools?|recommended ai tools|tool recommendations?|conclusion|summary|research|pricing|comparison|product recommendations?)$/i.test(name))return false;
+ if(/^(?:ai )?tools? for .+$/i.test(name))return false;
+ if(/\\b(vs\\.?|versus|compare|comparison|length\\s*(?:&|and)\\s*style|human[- ]like presenters?|narrated(?:/| or )presenter[- ]style videos?|presenter[- ]style videos?|automation\\s*(?:&|and|vs\\.?|versus)\\s*manual control|project management software|document editors?|whiteboarding tools?|pricing comparison|top tools|best tools|tool categories|bulk personalization|commercial licensing|data privacy|gpu requirements?|full control|resolution\\s*(?:&|and)\\s*export limits?|turn existing text|subscription|workflow phase)\\b/i.test(name))return false;
+ if(name.split(/\\s+/).length>7)return false;
  return true
 }
 function fallback(reply,mode){
