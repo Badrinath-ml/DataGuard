@@ -461,7 +461,7 @@ let P={...PD};try{Object.assign(P,JSON.parse(localStorage.getItem('dg-prefs')||'
 const DPC=['linear-gradient(135deg,#6d5ef5,#a78bfa)','linear-gradient(135deg,#4f46e5,#818cf8)','linear-gradient(135deg,#2563eb,#38bdf8)','linear-gradient(135deg,#a855f7,#ec4899)','linear-gradient(135deg,#475569,#94a3b8)'];
 function userName(){return P.name||(user||USERS.email).n}
 function renderDP(){$$('.dp').forEach(e=>{if(P.dp){e.style.backgroundImage='url('+P.dp+')';e.textContent=''}else{e.style.backgroundImage=DPC[P.col];e.textContent=(userName()[0]||'D').toUpperCase()}})}
-function applyPrefs(){B.style.setProperty('--cfs',P.size+'px');B.style.setProperty('--ub',DPC[P.ub]);B.classList.toggle('tson',P.ts);B.classList.toggle('sqb',P.shape==='square');$('#asn').textContent=P.asst||'DataGuard Assistant';$('#usrN').textContent=userName();renderDP()}
+function applyPrefs(){B.style.setProperty('--cfs',P.size+'px');B.style.setProperty('--ub',DPC[P.ub]);B.classList.toggle('tson',P.ts);B.classList.toggle('sqb',P.shape==='square');const asn=$('#asn'),usrN=$('#usrN');if(asn)asn.textContent=P.asst||'DataGuard Assistant';if(usrN)usrN.textContent=userName();renderDP()}
 function setP(k,v,sync=true){P[k]=v;applyPrefs();try{localStorage.setItem('dg-prefs',JSON.stringify(P))}catch(e){}if(sync)syncPers()}
 function styleReply(t){return P.tone==='friendly'?'Happy to help! '+t:P.tone==='concise'?t.split('. ')[0].replace(/\.?$/,'.'):t}
 function mark(sel,v){$$(sel+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===v))}
