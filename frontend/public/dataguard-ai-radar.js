@@ -177,7 +177,7 @@ function looksLikeProductName(value){
  const name=String(value||'').trim();if(name.length<2||name.length>64)return false;
  if(/^(purpose|features?|pros? and cons?|workflow|step\s*\d+|tools?|ai tools?|recommended tools?|recommended ai tools|tool recommendations?|conclusion|summary|research|pricing|comparison|product recommendations?)$/i.test(name))return false;
  if(/^(?:ai )?tools? for .+$/i.test(name))return false;
- if(/^(?:define|consider|check|choose|focus on|look for|decide on|ensure|review|evaluate|compare|understand|plan|create|select)\\b/i.test(name))return false;
+ if(/^(?:define|consider|check|choose|focus on|look for|decide on|ensure|review|evaluate|compare|understand|plan|create|select)\b/i.test(name))return false;
  if(/\b(vs\.?|versus|compare|comparison|length\s*(?:&|and)\s*style|human[- ]like presenters?|narrated(?:\/| or )presenter[- ]style videos?|presenter[- ]style videos?|automation\s*(?:&|and|vs\.?|versus)\s*manual control|project management software|document editors?|whiteboarding tools?|pricing comparison|top tools|best tools|tool categories|bulk personalization|commercial licensing|data[- ]privacy(?: needs)?|workflow integration|no subscription|full control|gpu requirements?|full control|resolution\s*(?:&|and)\s*export limits?|turn existing text|subscription|workflow phase)\b/i.test(name))return false;
  if(name.split(/\s+/).length>7)return false;
  return true
@@ -265,7 +265,7 @@ async function openHistory(id){
   if(!saved)throw Error('The saved AI response is not structured. Start a new request to regenerate it.');
   const mode=saved.radarMode||((Array.isArray(saved.steps)||Array.isArray(saved.workflow))?'workflow':'find');lastMode=mode;
   if($('#pf'))$('#pf').hidden=mode!=='find';if($('#pw'))$('#pw').hidden=mode!=='workflow';
-  $('.seg button[data-m]').forEach(b=>b.classList.toggle('on',b.dataset.m===mode||(mode==='workflow'&&b.dataset.m==='flow')));
+  $$('.seg button[data-m]').forEach(b=>b.classList.toggle('on',b.dataset.m===mode||(mode==='workflow'&&b.dataset.m==='flow')));
   if(saved.error){out.replaceChildren(el(saved.message||'This Radar request did not complete. You can retry it using the prompt above.','d18-error'));prependConversationHistory(out,messages);return}
   lastResult=saved;
   if(mode==='workflow'){if(!Array.isArray(saved.steps)&&Array.isArray(saved.workflow))saved.steps=saved.workflow;renderWorkflow(saved)}else renderTools(saved,true);
