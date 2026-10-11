@@ -77,6 +77,12 @@ if (!radar.includes("if(selected.includes('free only'))return price.kind==='FREE
 if (!radar.includes("label='Completely free'") || !radar.includes("label='Freemium'") || !radar.includes("label='Free with limits'")) {
   throw new Error('Tool cards must distinguish completely free, freemium, and limited-free pricing.');
 }
+if (!radar.includes("findVisibleCount=9") || !radar.includes("grid-template-columns:repeat(3,minmax(0,1fr))")) {
+  throw new Error('Find Tools must start with a three-column grid of nine individually named product cards.');
+}
+if (!radar.includes("const officialUrl=domain?'https://'+domain:") || !radar.includes("function drawWorkflowEdges(map)")) {
+  throw new Error('Known tools must prefer official domains and workflows must render connected nodes.');
+}
 if (!html.includes("dataguard-chat-session:") || !html.includes("body: JSON.stringify({ title: 'AI Assistant' })")) {
   throw new Error('The AI assistant must create and restore a persistent authenticated chat session.');
 }
