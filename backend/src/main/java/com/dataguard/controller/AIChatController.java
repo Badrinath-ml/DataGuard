@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -358,7 +359,7 @@ public class AIChatController {
             Map<String, Object> structured;
             try {
                 structured = radarNormalizer.normalize(parseJsonWithFallback(rawReply), mode, prompt);
-            } catch (IllegalArgumentException invalidFirstResponse) {
+            } catch (Exception invalidFirstResponse) {
                 // A valid JSON object can still be unusable. Ask the configured provider to repair its own response once.
                 List<Turn> repairTurns = new ArrayList<>(turns);
                 repairTurns.add(new Turn("assistant", rawReply));
