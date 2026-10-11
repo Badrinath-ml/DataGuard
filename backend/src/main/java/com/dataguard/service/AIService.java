@@ -12,6 +12,9 @@ import java.util.List;
 @Service
 public class AIService {
     private static final Logger log = LoggerFactory.getLogger(AIService.class);
+    // Explanations are optional. Bound the work so a project upload never waits minutes on the AI provider.
+    private static final int MAX_EXPLANATIONS = 5;
+    private static final long TIME_BUDGET_MS = 20_000L;
 
     private final RadarChatProvider provider;
     private final AIExplanationRepository aiExplanationRepository;
@@ -28,7 +31,11 @@ public class AIService {
             return;
         }
 
+        long deadline = System.currentTimeMillis() + TIME_BUDGET_MS;
+        int attempted = 0;
         for (Finding finding : findings) {
+            if (attempted >= MAX_EXPLANATIONS || System.currentTimeMillis() > deadline) break;
+            attempted++;
             try {
                 String systemPrompt = """
                         Explain this code-review finding concisely.
