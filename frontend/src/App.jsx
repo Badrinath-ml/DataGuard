@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import NavyVioletPrototype from './pages/NavyVioletPrototype';
 import CodeCheck from './pages/CodeCheck';
 import AIRadar from './pages/AIRadar';
+import Diagnostics from './pages/Diagnostics';
 
 function signedIn() {
   try { return Boolean(JSON.parse(localStorage.getItem('dataguard-auth') || '{}').token); }
@@ -19,6 +20,7 @@ export default function App() {
     <Route path="/dashboard" element={<Protected><CodeCheck /></Protected>} />
     <Route path="/code-check" element={<Protected><CodeCheck /></Protected>} />
     <Route path="/ai-radar" element={<Protected><AIRadar /></Protected>} />
+    <Route path="/diagnostics" element={<Diagnostics />} />
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes></BrowserRouter>;
 }
