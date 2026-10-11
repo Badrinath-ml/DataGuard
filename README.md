@@ -34,6 +34,26 @@ mvn spring-boot:run
 
 Spring Boot listens on `http://localhost:8080`.
 
+### Build a deployment image
+
+The backend Dockerfile packages Java 21 and the Semgrep CLI. For a single-instance deployment, mount a persistent volume at `/var/data/dataguard` and set the database, JWT, CORS, and AI-provider environment variables at runtime:
+
+```bash
+docker build -t dataguard-backend ./backend
+docker run --rm -p 8080:8080 \
+  -v dataguard-data:/var/data/dataguard \
+  -e DB_URL="$DB_URL" \
+  -e DB_USERNAME="$DB_USERNAME" \
+  -e DB_PASSWORD="$DB_PASSWORD" \
+  -e JWT_SECRET="$JWT_SECRET" \
+  -e CORS_ALLOWED_ORIGINS="https://your-frontend.example.com" \
+  -e GROQ_API_KEY="$GROQ_API_KEY" \
+  -e GEMINI_API_KEY="$GEMINI_API_KEY" \
+  dataguard-backend
+```
+
+Set secrets in your hosting provider's secret manager rather than committing them. The image enables Semgrep by default and downloads the configured public rule pack during scans; allow outbound HTTPS. The `/api/health` endpoint checks database connectivity. For multiple backend replicas, use shared private object storage instead of a local Docker volume.
+
 ## Start frontend
 In a second terminal:
 
