@@ -81,25 +81,32 @@ function toolGrid(out,items,title){
  out.append(grid)
 }
 function findPricing(tool){
- const kind=String(tool.pricingType||'').toUpperCase().replace(/[\s-]+/g,'_'),details=String(tool.pricingDetails||'');
- let hasFree=tool.hasFreePlan;
- if(hasFree===null){
-  if(kind==='FREE_ONLY'||kind==='FREE_WITH_LIMITS'||kind==='FREEMIUM'||kind.includes('FREE_TIER'))hasFree=true;
-  else if(kind==='PAID_SUBSCRIPTION'||kind==='PAID_USAGE'||kind==='FREE_TRIAL_THEN_PAID')hasFree=false;
-  else if(/\bfree plan\b|\bfree tier\b|\bfreemium\b|\bfree with limits\b|\blimited free\b/i.test(details))hasFree=true;
-  else if(/\bpaid only\b|\bno free plan\b|\bsubscription required\b/i.test(details))hasFree=false;
+ const rawKind=String(tool.pricingType||'').toUpperCase().replace(/[\s-]+/g,'_');
+ const details=String(tool.pricingDetails||'');
+ let kind=rawKind;
+ if(!kind||kind==='UNKNOWN'){
+  if(/\bcompletely free\b|\bfree forever\b|\bfree only\b/i.test(details))kind='FREE_ONLY';
+  else if(/\bfree with limits\b|\blimited free\b|\bcredits\b/i.test(details))kind='FREE_WITH_LIMITS';
+  else if(/\bfreemium\b|\bfree plan\b|\bfree tier\b/i.test(details))kind='FREEMIUM';
+  else if(/\bfree trial\b/i.test(details))kind='FREE_TRIAL_THEN_PAID';
+  else if(/\bpay[- ]as[- ]you[- ]go\b|\bpaid by usage\b/i.test(details))kind='PAID_USAGE';
+  else if(/\bpaid\b|\bsubscription\b|\bper month\b|\bmonthly\b/i.test(details))kind='PAID_SUBSCRIPTION';
  }
- let status='unknown',label='Pricing varies',plans=false;
- if(hasFree===true){status='free';label='Free';plans=kind!=='FREE_ONLY'&&(kind==='FREEMIUM'||kind==='FREE_WITH_LIMITS'||/\bpaid plans?\b|\bplans available\b|\bupgrade\b|\bpremium\b/i.test(details))}
- else if(kind==='FREE_TRIAL_THEN_PAID'){status='trial';label='Free trial';plans=true}
- else if(hasFree===false||kind.startsWith('PAID_')){status='paid';label='Paid'}
- else if(kind==='FREE_ONLY'){status='free';label='Free'}
- return{status:status,label:label,plans:plans,hasFree:hasFree,monthly:tool.monthlyPriceUsd,details:details};
+ let status='unknown',label='Pricing unverified',plans=false,hasFree=tool.hasFreePlan;
+ if(kind==='FREE_ONLY'){status='free';label='Completely free';hasFree=true}
+ else if(kind==='FREE_WITH_LIMITS'){status='limited';label='Free with limits';hasFree=true;plans=true}
+ else if(kind==='FREEMIUM'){status='freemium';label='Freemium';hasFree=true;plans=true}
+ else if(kind==='FREE_TRIAL_THEN_PAID'){status='trial';label='Free trial, then paid';hasFree=false;plans=true}
+ else if(kind==='PAID_USAGE'){status='paid';label='Paid by usage';hasFree=false}
+ else if(kind==='PAID_SUBSCRIPTION'){status='paid';label='Paid subscription';hasFree=false}
+ else if(hasFree===true){status='freemium';label='Free plan (limits unverified)';plans=true;kind='FREEMIUM'}
+ else if(hasFree===false){status='paid';label='No free plan reported';kind='PAID_SUBSCRIPTION'}
+ return{kind:kind,status:status,label:label,plans:plans,hasFree:hasFree,monthly:tool.monthlyPriceUsd,details:details};
 }
 function findMatchesBudget(tool){
  const selected=budget(),price=findPricing(tool);
- if(selected.includes('free only'))return price.hasFree===true;
- if(selected.includes('under $20'))return price.hasFree===true||(typeof price.monthly==='number'&&price.monthly>=0&&price.monthly<20);
+ if(selected.includes('free only'))return price.kind==='FREE_ONLY';
+ if(selected.includes('under $20'))return ['FREE_ONLY','FREE_WITH_LIMITS','FREEMIUM'].includes(price.kind)||(typeof price.monthly==='number'&&price.monthly>=0&&price.monthly<20);
  return true;
 }
 const brandDomains={'runway':'runwayml.com','runway ai':'runwayml.com','pika':'pika.art','pika labs':'pika.art','kling ai':'klingai.com','kling':'klingai.com','luma ai':'lumalabs.ai','luma dream machine':'lumalabs.ai','synthesia':'synthesia.io','heygen':'heygen.com','invideo ai':'invideo.io','kaiber':'kaiber.ai','pictory':'pictory.ai','lumen5':'lumen5.com','hailuo ai':'hailuoai.video','pixverse':'pixverse.ai','leonardo ai':'leonardo.ai','adobe firefly':'adobe.com','sora':'openai.com','veo':'deepmind.google','midjourney':'midjourney.com','capcut':'capcut.com','davinci resolve':'blackmagicdesign.com','blackmagic design':'blackmagicdesign.com','adobe premiere pro':'adobe.com','premiere pro':'adobe.com','adobe photoshop':'adobe.com','canva':'canva.com','gimp':'gimp.org','final cut pro':'apple.com','descript':'descript.com','audacity':'audacityteam.org','shotcut':'shotcut.org','clipchamp':'clipchamp.com','veed':'veed.io','grammarly':'grammarly.com','chatgpt':'chatgpt.com','github copilot':'github.com','runway':'runwayml.com','invideo':'invideo.io','filmora':'filmora.wondershare.com','obs studio':'obsproject.com','kdenlive':'kdenlive.org','figma':'figma.com','notion':'notion.so','openai':'openai.com','gemini':'gemini.google.com','claude':'claude.ai','vegas pro':'vegascreativesoftware.com'};
