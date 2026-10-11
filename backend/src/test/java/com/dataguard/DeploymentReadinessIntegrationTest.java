@@ -107,6 +107,17 @@ class DeploymentReadinessIntegrationTest {
                 .andExpect(jsonPath("$.sessionId").value(sessionId))
                 .andExpect(jsonPath("$.messages").isArray());
 
+        String otherToken = registerAndGetToken(
+                "Other Account", "other-" + UUID.randomUUID() + "@example.com", "Correct-Horse-Battery-42");
+        mockMvc.perform(get("/api/ai/chat/sessions")
+                        .header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+        mockMvc.perform(get("/api/projects/reviews")
+                        .header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+
         mockMvc.perform(options("/api/auth/login")
                         .header("Origin", "http://localhost:5173")
                         .header("Access-Control-Request-Method", "POST")
