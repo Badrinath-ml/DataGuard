@@ -39,3 +39,22 @@
 .dg-dark .dg-assistant-welcome-icon{background:#2d2650;color:#c7b8ff;}
 .dg-dark .dg-assistant-popover .dg-chat-form input{background:#2d2650;border-color:#40375f;color:#f2efff;}
 .dg-dark .dg-assistant-popover .dg-chat-form input::placeholder{color:#9a95bd;}
+
+/* Compact, calmer history rows and useful delete affordances */
+.dg-radar-history-item{display:flex;align-items:center;gap:4px;margin:2px 0;border-radius:10px;}
+.dg-radar-history-item>button:first-child{min-width:0;flex:1;text-align:left;padding:8px 9px;border:0;background:transparent;color:inherit;display:flex;flex-direction:column;gap:3px;border-radius:8px;}
+.dg-radar-history-item>button:first-child span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;}
+.dg-radar-history-item>button:first-child small{font-size:11px;opacity:.7;}
+.dg-radar-history-item.active,.dg-radar-history-item:hover{background:rgba(124,92,246,.09);}
+.dg-delete-history{opacity:0;flex:none;border:0;background:transparent;color:#8b83a8;padding:7px;border-radius:7px;cursor:pointer;}
+.dg-radar-history-item:hover .dg-delete-history,.dg-radar-history-item:focus-within .dg-delete-history{opacity:1;}
+.dg-delete-history:hover{background:#fee9e9;color:#bd3434;}
+.dg-review-chat-expanded{position:fixed!important;z-index:25;inset:18px 20px 18px max(20px,calc((100vw - 1100px)/2))!important;display:flex!important;flex-direction:column;max-height:none!important;margin:0!important;border:1px solid #ddd5f4!important;border-radius:18px!important;box-shadow:0 24px 90px rgba(28,19,54,.28)!important;background:#fff!important;}
+.dg-review-chat-expanded .dg-chat-messages{flex:1;min-height:0;max-height:none!important;overflow-y:auto!important;}
+.dg-chat-expand{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;border:0;background:transparent;text-align:left;cursor:pointer;color:inherit;}
+.dg-expand-label{font-size:12px;color:#7862ce;font-weight:650;margin-left:auto;white-space:nowrap;}
+.dg-review-chat-expanded .dg-chat-heading{flex:none;}
+.dg-review-chat-expanded .dg-chat-form{flex:none;}
+.dg-dark .dg-review-chat-expanded{background:#211b38!important;color:#f2efff!important;border-color:#40375f!important;}
+.dg-dark .dg-review-chat-expanded .dg-chat-messages{background:#211b38!important;}
+@media(max-width:700px){.dg-review-chat-expanded{inset:8px!important;border-radius:12px!important;}.dg-delete-history{opacity:1;}}
