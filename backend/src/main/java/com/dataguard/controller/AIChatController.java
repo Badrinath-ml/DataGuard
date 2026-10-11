@@ -49,13 +49,15 @@ public class AIChatController {
     public AIChatController(RadarChatProvider provider, UserRepository userRepository,
                             AIConversationSessionRepository sessionRepository,
                             AIConversationMessageRepository messageRepository,
-                            ReviewRepository reviewRepository, FindingRepository findingRepository,\n                            com.dataguard.service.RadarResponseNormalizer radarNormalizer) {
+                            ReviewRepository reviewRepository, FindingRepository findingRepository,
+                            com.dataguard.service.RadarResponseNormalizer radarNormalizer) {
         this.provider = provider;
         this.userRepository = userRepository;
         this.sessionRepository = sessionRepository;
         this.messageRepository = messageRepository;
         this.reviewRepository = reviewRepository;
-        this.findingRepository = findingRepository;\n        this.radarNormalizer = radarNormalizer;
+        this.findingRepository = findingRepository;
+        this.radarNormalizer = radarNormalizer;
     }
 
     public record ChatRequest(String message, UUID sessionId) {}
@@ -322,8 +324,8 @@ public class AIChatController {
 
         String prompt = request.prompt().trim();
         String providerPrompt = prompt
-                + (request.category() == null || request.category().isBlank() ? "" : "\\nPreferred category: " + request.category().trim())
-                + (request.budget() == null || request.budget().isBlank() ? "" : "\\nBudget preference: " + request.budget().trim());
+                + (request.category() == null || request.category().isBlank() ? "" : "\nPreferred category: " + request.category().trim())
+                + (request.budget() == null || request.budget().isBlank() ? "" : "\nBudget preference: " + request.budget().trim());
 
         String system = mode.equals("workflow")
                 ? """
