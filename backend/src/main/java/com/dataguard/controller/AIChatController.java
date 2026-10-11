@@ -14,6 +14,8 @@ import com.dataguard.repository.FindingRepository;
 import com.dataguard.repository.ReviewRepository;
 import com.dataguard.repository.UserRepository;
 import org.springframework.security.core.Authentication;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +28,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -40,17 +43,21 @@ public class AIChatController {
     private final AIConversationMessageRepository messageRepository;
     private final ReviewRepository reviewRepository;
     private final FindingRepository findingRepository;
+    private final com.dataguard.service.RadarResponseNormalizer radarNormalizer;
+    private static final Logger log = LoggerFactory.getLogger(AIChatController.class);
 
     public AIChatController(RadarChatProvider provider, UserRepository userRepository,
                             AIConversationSessionRepository sessionRepository,
                             AIConversationMessageRepository messageRepository,
-                            ReviewRepository reviewRepository, FindingRepository findingRepository) {
+                            ReviewRepository reviewRepository, FindingRepository findingRepository,
+                            com.dataguard.service.RadarResponseNormalizer radarNormalizer) {
         this.provider = provider;
         this.userRepository = userRepository;
         this.sessionRepository = sessionRepository;
         this.messageRepository = messageRepository;
         this.reviewRepository = reviewRepository;
         this.findingRepository = findingRepository;
+        this.radarNormalizer = radarNormalizer;
     }
 
     public record ChatRequest(String message, UUID sessionId) {}
@@ -295,63 +302,80 @@ public class AIChatController {
         if (request == null || request.prompt() == null || request.prompt().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Describe what you want AI Radar to help with."));
         }
-        if (!provider.isConfigured()) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(Map.of("message", "AI Radar is not configured. Set GROQ_API_KEY or GEMINI_API_KEY in the backend environment."));
-        }
 
         String mode = "workflow".equalsIgnoreCase(request.mode()) ? "workflow" : "find";
+        User user = currentUser(authentication);
+        AIConversationSession conversation = null;
+        boolean newConversation = request.sessionId() == null;
+        if (!newConversation) {
+            conversation = sessionRepository.findBySessionIdAndUser(request.sessionId(), user).orElse(null);
+            if (conversation == null) return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "This AI Radar history was not found for your account."));
+            if (!"AI_RADAR".equalsIgnoreCase(conversation.getContextType()) || conversation.getReview() != null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Choose an AI Radar conversation to continue."));
+            }
+        } else {
+            conversation = new AIConversationSession();
+            conversation.setUser(user);
+            conversation.setContextType("AI_RADAR");
+            conversation.setTitle(cleanTitle(request.prompt()));
+        }
+
+        String prompt = request.prompt().trim();
+        String providerPrompt = prompt
+                + (request.category() == null || request.category().isBlank() ? "" : "\nPreferred category: " + request.category().trim())
+                + (request.budget() == null || request.budget().isBlank() ? "" : "\nBudget preference: " + request.budget().trim());
+
         String system = mode.equals("workflow")
                 ? """
                   You are DataGuard AI Radar, a practical workflow planner. Return one valid JSON object only, with no Markdown fences or surrounding prose.
-                  Schema: {"title":"short workflow title","summary":"one-sentence outcome","steps":[{"title":"short meaningful phase name","action":"clear actionable instructions in plain text","deliverable":"concrete result for this step","timeEstimate":"realistic short estimate","tools":[{"name":"actual named software product","purpose":"what the product does for this step","pricingType":"FREE_ONLY or FREE_WITH_LIMITS or FREE_TRIAL_THEN_PAID or FREEMIUM or PAID_SUBSCRIPTION or PAID_USAGE","pricingDetails":"cautious concise plan note","hasFreePlan":true,"monthlyPriceUsd":null,"url":"official product URL"}]}],"recommendedTools":[{"name":"actual named software product","category":"short category","purpose":"one clear product description","bestFor":"specific fit for this goal","pricingType":"FREE_ONLY or FREE_WITH_LIMITS or FREE_TRIAL_THEN_PAID or FREEMIUM or PAID_SUBSCRIPTION or PAID_USAGE","hasFreePlan":true,"monthlyPriceUsd":null,"pricingDetails":"brief plan note; verify if uncertain","url":"official product URL"}]}.
-                  Return ONLY valid JSON matching the schema; never use Markdown fences, numbered prose, bold markers, headings, or text outside the JSON object. Provide 5-8 sequential, useful steps. Every step must have a non-empty title and a meaningful action of at least one sentence; never output placeholder steps such as '--'. Arrange steps in a connected journey from goal/discovery through creation, setup, launch, and improvement as appropriate to the user's goal. Include a short timeEstimate where useful. Include 1-3 actual product names in each step's tools array and 6-12 distinct real products in recommendedTools. The recommendedTools list is required and must not be empty when relevant tools exist. The products in recommendedTools must be real named tools, not abstract concepts or categories such as 'Length & Style', 'Human-like Presenters', 'Automation vs. Manual Control', 'Project Management Software', or 'Research'. Never use descriptions, features, comparisons, or workflow phases as tool names. For pricing, set hasFreePlan=true only when a usable free tier exists, false for paid-only products and trial-only products; a time-limited trial is not a free plan. Use FREE_ONLY only for products that are fully free, and FREEMIUM or FREE_WITH_LIMITS when a free tier has paid upgrades or usage limits. Set monthlyPriceUsd to the lowest known recurring monthly USD price or null when uncertain. Do not invent products, URLs, exact prices, or credit amounts. Use an empty string for an unknown official URL and null for an unknown price. JSON must be syntactically valid.
+                  Schema: {"title":"short workflow title","summary":"one-sentence outcome","steps":[{"title":"meaningful phase title","action":"clear actionable instructions of at least two sentences","deliverable":"concrete result for this phase","timeEstimate":"realistic short estimate","tools":[{"name":"actual named software product","purpose":"what the product does for this step","pricingType":"FREE_ONLY or FREE_WITH_LIMITS or FREE_TRIAL_THEN_PAID or FREEMIUM or PAID_SUBSCRIPTION or PAID_USAGE or UNKNOWN","pricingDetails":"cautious plan note","hasFreePlan":true,"monthlyPriceUsd":null,"url":"official product URL or empty string"}]}],"recommendedTools":[{"name":"actual named software product","category":"short category","purpose":"one clear product description","bestFor":"specific fit for this goal","pricingType":"FREE_ONLY or FREE_WITH_LIMITS or FREE_TRIAL_THEN_PAID or FREEMIUM or PAID_SUBSCRIPTION or PAID_USAGE or UNKNOWN","hasFreePlan":true,"monthlyPriceUsd":null,"pricingDetails":"brief plan note; verify if uncertain","url":"official product URL or empty string"}]}.
+                  Return 5-8 sequential, connected steps with real titles, actionable instructions, deliverables, and realistic estimates. Each step must have a meaningful action of at least 18 characters. Include 1-3 actual named software products per step and 6-12 distinct named products in recommendedTools. Tool names must be real software product names, never features, workflow phases, comparisons, or advice headings. Use a usable free tier for hasFreePlan=true; trial-only products must have hasFreePlan=false. Never invent exact prices, URLs, or credit amounts. Use null for unknown prices and an empty string for unknown URLs.
                   """
                 : """
                   You are DataGuard AI Radar, a tool discovery assistant. Return one valid JSON object only, with no Markdown fences or surrounding prose.
-                  Schema: {"tools":[{"name":"real tool name","category":"short category","purpose":"one clear sentence describing what the tool does","bestFor":"specific fit for the user's goal","pricingType":"FREE_ONLY or FREE_WITH_LIMITS or FREE_TRIAL_THEN_PAID or FREEMIUM or PAID_SUBSCRIPTION or PAID_USAGE","hasFreePlan":true,"monthlyPriceUsd":null,"pricingDetails":"brief plan detail; use Verify current plan/pricing if uncertain","url":"official product URL"}]}.
-                  Return 9–15 distinct, real, directly relevant software products for normal requests and up to 24 when especially useful; for requests such as 'video generation AI tools', return named products such as Runway, Pika, Kling AI, Luma Dream Machine, Synthesia, or other genuinely relevant tools—not cards about features or selection advice. Include a balanced range of free, freemium, free-trial, and paid options regardless of the selected UI price filter because the UI applies filters locally. Always return the `tools` array using the specified schema. Each item must be an actual named software product/service, not a topic, feature, category, comparison, recommendation sentence, or editorial heading. Reject names like 'Length & Style', 'Human-like Presenters', 'Automation vs. Manual Control', 'Compare output', or 'Best tools'. Never return workflow steps or general advice as tool cards. Include the official product URL when known; do not omit a valid tool just because its URL is uncertain. Never invent exact prices. Make purpose a concise user-facing description. hasFreePlan must be true only when the tool has a usable free tier (not merely a time-limited trial); monthlyPriceUsd must be the lowest known recurring monthly USD price for a usable plan, or null if it cannot be reliably stated. For free tiers with paid upgrades, use FREEMIUM or FREE_WITH_LIMITS and hasFreePlan=true. For entirely free products use FREE_ONLY. For paid products without a free tier use a paid pricingType and hasFreePlan=false. Never invent exact prices or URLs; if unsure set monthlyPriceUsd to null and say Verify current plan/pricing. JSON must be syntactically valid.
+                  Schema: {"tools":[{"name":"real software product name","category":"short category","purpose":"one clear sentence describing what the tool does","bestFor":"specific fit for the user's goal","pricingType":"FREE_ONLY or FREE_WITH_LIMITS or FREE_TRIAL_THEN_PAID or FREEMIUM or PAID_SUBSCRIPTION or PAID_USAGE or UNKNOWN","hasFreePlan":true,"monthlyPriceUsd":null,"pricingDetails":"brief plan detail; verify if uncertain","url":"official product URL or empty string"}]}.
+                  Return 9-15 distinct real software products directly relevant to the user's goal (up to 24 only when especially useful). Every item must be an actual named product/service, not a category, feature, comparison, advice, or workflow step. Do not return names such as "Purpose", "Length & Style", "Human-like Presenters", "Bulk Personalization", "Commercial Licensing", "Data Privacy", "GPU Requirements", "Best Tools", or "Automation vs. Manual Control". Include products across free, freemium, free-trial, and paid options regardless of the selected UI filter; the UI filters the complete result locally. Never invent exact prices, official URLs, or credit amounts. Use null for unknown prices and an empty string for unknown URLs. hasFreePlan is true only for a usable free tier, not a time-limited trial.
                   """;
 
-        String prompt = request.prompt().trim()
-                + (request.category() == null || request.category().isBlank() ? "" : "\nPreferred category: " + request.category().trim())
-                + (mode.equals("workflow") && request.budget() != null && !request.budget().isBlank()
-                    ? "\nBudget preference: " + request.budget().trim() : "");
+        List<Turn> turns = new ArrayList<>();
+        turns.add(new Turn("system", system));
+        if (!newConversation) {
+            messageRepository.findTop20BySessionOrderByCreatedAtDesc(conversation).stream()
+                    .sorted(Comparator.comparing(AIConversationMessage::getCreatedAt))
+                    .forEach(message -> turns.add(new Turn(message.getRole(), message.getContent())));
+        }
+
+        conversation.setUpdatedAt(Instant.now());
+        conversation = sessionRepository.save(conversation);
+        saveMessage(conversation, "user", prompt);
+        turns.add(new Turn("user", providerPrompt));
 
         try {
-            User user = currentUser(authentication);
-            AIConversationSession conversation = null;
-            if (request.sessionId() != null) {
-                conversation = sessionRepository.findBySessionIdAndUser(request.sessionId(), user).orElse(null);
-                if (conversation == null) return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", "This AI Radar history was not found for your account."));
-                if (!"AI_RADAR".equalsIgnoreCase(conversation.getContextType()) || conversation.getReview() != null) {
-                    return ResponseEntity.badRequest()
-                            .body(Map.of("message", "Choose an AI Radar conversation to continue."));
-                }
+            if (!provider.isConfigured()) {
+                throw new RadarProviderUnavailableException();
             }
 
-            List<Turn> turns = new ArrayList<>();
-            turns.add(new Turn("system", system));
-            if (conversation != null) {
-                messageRepository.findTop20BySessionOrderByCreatedAtDesc(conversation).stream()
-                        .sorted(Comparator.comparing(AIConversationMessage::getCreatedAt))
-                        .forEach(message -> turns.add(new Turn(message.getRole(), message.getContent())));
+            String rawReply = provider.completeJson(turns);
+            Map<String, Object> structured;
+            try {
+                structured = radarNormalizer.normalize(parseJsonWithFallback(rawReply), mode, prompt);
+            } catch (Exception invalidFirstResponse) {
+                // A valid JSON object can still be unusable. Ask the configured provider to repair its own response once.
+                List<Turn> repairTurns = new ArrayList<>(turns);
+                repairTurns.add(new Turn("assistant", rawReply));
+                repairTurns.add(new Turn("user", """
+                        The previous JSON did not satisfy the required schema or included editorial headings instead of real product names.
+                        Return a corrected JSON object for the same goal. Include the required number of complete steps and/or actual named software products.
+                        Do not include prose outside JSON. Do not invent prices or URLs.
+                        """));
+                String repairedReply = provider.completeJson(repairTurns);
+                structured = radarNormalizer.normalize(parseJsonWithFallback(repairedReply), mode, prompt);
             }
-            turns.add(new Turn("user", prompt));
 
-            String reply = provider.completeJson(turns);
-            Map<String, Object> structured = parseJsonWithFallback(reply);
-
-            if (conversation == null) {
-                conversation = new AIConversationSession();
-                conversation.setUser(user);
-                conversation.setContextType("AI_RADAR");
-                conversation.setTitle(cleanTitle(request.prompt()));
-            }
             conversation.setUpdatedAt(Instant.now());
             conversation = sessionRepository.save(conversation);
-            saveMessage(conversation, "user", request.prompt().trim());
             saveMessage(conversation, "assistant", new ObjectMapper().writeValueAsString(structured));
 
             Map<String, Object> response = new HashMap<>();
@@ -362,9 +386,36 @@ public class AIChatController {
             response.put("mode", mode);
             return ResponseEntity.ok(response);
         } catch (Exception exception) {
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                    .body(Map.of("message", "AI Radar could not complete a structured response. Check the backend provider configuration, API quota, and server logs."));
+            boolean configured = provider.isConfigured();
+            String message = configured
+                    ? "The AI provider failed or returned invalid structured data. Your prompt was saved to AI Radar history. Check the backend logs for provider status, quota, and model errors."
+                    : "AI Radar is not configured on the backend. Your prompt was saved to AI Radar history; configure GROQ_API_KEY or GEMINI_API_KEY.";
+            // Never log the exception message or URL: provider errors can include secret query parameters.
+            log.warn("AI Radar {} request failed for session {} ({}).", mode, conversation.getSessionId(),
+                    exception.getClass().getSimpleName());
+            try {
+                Map<String, Object> failure = new LinkedHashMap<>();
+                failure.put("radarMode", mode);
+                failure.put("error", configured ? "provider_or_schema_failure" : "provider_not_configured");
+                failure.put("message", message);
+                saveMessage(conversation, "assistant", new ObjectMapper().writeValueAsString(failure));
+                conversation.setUpdatedAt(Instant.now());
+                sessionRepository.save(conversation);
+            } catch (Exception persistenceException) {
+                log.error("Could not persist AI Radar failure history for session {} ({}).",
+                        conversation.getSessionId(), persistenceException.getClass().getSimpleName());
+            }
+            Map<String, Object> failureResponse = new HashMap<>();
+            failureResponse.put("message", message);
+            failureResponse.put("sessionId", conversation.getSessionId());
+            failureResponse.put("contextType", "AI_RADAR");
+            return ResponseEntity.status(configured ? HttpStatus.BAD_GATEWAY : HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(failureResponse);
         }
+    }
+
+    private static final class RadarProviderUnavailableException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
     }
 
     @SuppressWarnings("unchecked")
