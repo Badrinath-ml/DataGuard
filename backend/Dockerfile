@@ -13,7 +13,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+RUN mkdir -p /var/data/dataguard
 COPY --from=build /workspace/target/dataguard-backend-0.0.1-SNAPSHOT.jar /app/app.jar
+ENV DATAGUARD_STORAGE_DIR=/var/data/dataguard
 ENV SEMGREP_ENABLED=true
 ENV SEMGREP_EXECUTABLE=/opt/semgrep/bin/semgrep
 ENV SEMGREP_CONFIG=p/security-audit
