@@ -77,3 +77,14 @@
 .dg-markdown pre code{padding:0;background:transparent;color:inherit;white-space:pre;}
 .dg-markdown a{color:#7454e8;text-decoration:underline;text-underline-offset:2px;}
 .dg-dark .dg-markdown a{color:#b9a7ff;}
+
+/* AI Radar keeps its original compact floating-assistant interaction. */
+.dg-radar-assistant-backdrop{position:fixed;inset:0;z-index:30;background:transparent;pointer-events:none;}
+.dg-radar-assistant-backdrop .dg-assistant-popover{pointer-events:auto;position:fixed;inset:auto 24px 82px auto;width:min(410px,calc(100vw - 28px));height:min(500px,calc(100dvh - 110px));max-height:calc(100dvh - 110px);border-radius:20px;}
+.dg-radar-assistant-backdrop .dg-popover-head{min-height:58px;padding:13px 16px;font-size:14px;}
+.dg-radar-assistant-backdrop .dg-popover-messages{padding:14px;}
+.dg-radar-assistant-backdrop .dg-assistant-welcome{margin:24px auto 16px;}
+.dg-radar-assistant-backdrop .dg-assistant-welcome h2{font-size:23px;}
+.dg-radar-assistant-backdrop .dg-assistant-suggestions{gap:7px;margin-top:18px;}
+.dg-radar-assistant-backdrop .dg-assistant-suggestions button{padding:8px 10px;font-size:12px;}
+@media(max-width:600px){.dg-radar-assistant-backdrop .dg-assistant-popover{inset:auto 8px 74px 8px;width:auto;height:min(72dvh,560px);max-height:calc(100dvh - 88px);}}
