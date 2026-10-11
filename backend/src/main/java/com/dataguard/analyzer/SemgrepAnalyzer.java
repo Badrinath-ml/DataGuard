@@ -71,7 +71,8 @@ public class SemgrepAnalyzer {
                     "--exclude", "node_modules",
                     "--exclude", "target",
                     "--exclude", "dist",
-                    projectDir.getAbsolutePath());
+                    ".");
+            builder.directory(projectDir);
             builder.redirectOutput(output.toFile());
             builder.redirectError(ProcessBuilder.Redirect.DISCARD);
             process = builder.start();
