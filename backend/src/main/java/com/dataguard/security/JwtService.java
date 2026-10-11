@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
@@ -19,6 +20,14 @@ public class JwtService {
 
     @Value("${dataguard.security.jwt.expiration:86400000}")
     private long jwtExpiration;
+
+    @PostConstruct
+    public void validateConfiguration() {
+        getSignInKey();
+        if (jwtExpiration <= 0) {
+            throw new IllegalStateException("JWT_EXPIRATION_MS must be greater than zero.");
+        }
+    }
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
