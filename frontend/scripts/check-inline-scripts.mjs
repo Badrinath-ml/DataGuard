@@ -41,7 +41,7 @@ const legacyRadarScripts = [
 if (radar.includes("$('.seg button[data-m]').forEach")) {
   throw new Error('Radar history restoration must use the multi-element selector for segment buttons.');
 }
-if (legacyRadarScripts.some((script) => /wireUpload\\(\\);wireRadar\\(\\)/.test(script))) {
+if (legacyRadarScripts.some((script) => /wireUpload\(\);wireRadar\(\)/.test(script))) {
   throw new Error('Legacy scripts must not attach competing AI Radar handlers.');
 }
 const workspace = readFileSync(fileURLToPath(new URL('../public/dataguard-chat-workspace.js', import.meta.url)), 'utf8');
