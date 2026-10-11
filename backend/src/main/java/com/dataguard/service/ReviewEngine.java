@@ -3,6 +3,7 @@ package com.dataguard.service;
 import com.dataguard.analyzer.ArchitectureAnalyzer;
 import com.dataguard.analyzer.CodeQualityAnalyzer;
 import com.dataguard.analyzer.SecurityAnalyzer;
+import com.dataguard.analyzer.SemgrepAnalyzer;
 import com.dataguard.entity.Finding;
 import com.dataguard.entity.Project;
 import com.dataguard.entity.Review;
@@ -20,6 +21,7 @@ public class ReviewEngine {
     private final FindingRepository findingRepository;
     private final CodeQualityAnalyzer codeQualityAnalyzer;
     private final SecurityAnalyzer securityAnalyzer;
+    private final SemgrepAnalyzer semgrepAnalyzer;
     private final ArchitectureAnalyzer architectureAnalyzer;
     private final AIService aiService;
 
@@ -35,6 +37,7 @@ public class ReviewEngine {
         findings.addAll(codeQualityAnalyzer.analyze(extractedProjectDir, review));
         findings.addAll(securityAnalyzer.analyze(extractedProjectDir, review));
         findings.addAll(architectureAnalyzer.analyze(extractedProjectDir, review));
+        findings.addAll(semgrepAnalyzer.analyze(extractedProjectDir, review));
 
         if (!findings.isEmpty()) {
             findingRepository.saveAll(findings);
@@ -60,12 +63,14 @@ public class ReviewEngine {
                         CodeQualityAnalyzer codeQualityAnalyzer,
                         SecurityAnalyzer securityAnalyzer,
                         ArchitectureAnalyzer architectureAnalyzer,
+                        SemgrepAnalyzer semgrepAnalyzer,
                         AIService aiService) {
         this.reviewRepository = reviewRepository;
         this.findingRepository = findingRepository;
         this.codeQualityAnalyzer = codeQualityAnalyzer;
         this.securityAnalyzer = securityAnalyzer;
         this.architectureAnalyzer = architectureAnalyzer;
+        this.semgrepAnalyzer = semgrepAnalyzer;
         this.aiService = aiService;
     }
 }
