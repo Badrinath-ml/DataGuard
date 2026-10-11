@@ -42,6 +42,14 @@ jobs:
         working-directory: backend
         run: mvn --batch-mode clean verify
 
+  backend-container:
+    name: Backend Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build deployment image
+        run: docker build --tag dataguard-backend-ci ./backend
+
   frontend:
     name: Frontend build
     runs-on: ubuntu-latest
