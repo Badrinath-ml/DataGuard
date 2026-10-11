@@ -41,6 +41,14 @@ npm run dev
 
 Vite listens on `http://localhost:5173` and proxies `/api` requests to Spring Boot on port 8080. For a deployed API, configure `VITE_API_URL` in the frontend environment.
 
+### Production frontend/backend connection
+
+Set `VITE_API_URL` in the **frontend build environment** to the public Spring Boot base URL (for example, `https://your-api.example.com`, without an `/api` suffix), then rebuild and redeploy the frontend. The React shell passes this build-time value to the existing same-origin dashboard iframe before its scripts initialize.
+
+On the **backend hosting service**, set `CORS_ALLOWED_ORIGINS` to the exact frontend origin, including scheme and any non-default port (for example, `https://your-frontend.example.com`). Separate multiple exact origins with commas; do not include URL paths or use `*` for authenticated requests. Restart/redeploy the backend after changing it.
+
+The backend defaults intentionally allow only local Vite origins. If frontend and backend use separate hosts, leaving out the deployed frontend origin will cause the browser to block the login response with a CORS error. CORS does not replace JWT authentication: login/register remain public routes, and protected API routes continue to require the backend-issued Bearer token. Keep database credentials, `JWT_SECRET`, and AI-provider keys on the backend only.
+
 ## Expected flow
 1. Register with a valid name, email, and password.
 2. Spring Boot validates the data, stores the BCrypt password hash in Aiven PostgreSQL, and returns a JWT.
