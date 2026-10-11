@@ -155,12 +155,13 @@ public class RadarResponseNormalizer {
         if (name == null || name.length() < 2 || name.length() > 64 || isEditorialName(name)) return false;
         if (name.matches("(?i)^(purpose|features?|pros? and cons?|workflow|step\\s*\\d+|tools?|ai tools?|recommended tools?|recommended ai tools|tool recommendations?|conclusion|summary|research|pricing|comparison|product recommendations?)$")) return false;
         if (name.matches("(?i)^(?:ai )?tools? for .+$")) return false;
+        if (name.matches("(?i)^(?:define|consider|check|choose|focus on|look for|decide on|ensure|review|evaluate|compare|understand|plan|create|select)\\b.*")) return false;
         return !name.matches("(?i).*(?:\\bvs\\.?\\b|\\bversus\\b|\\bcompare\\b|\\bcomparison\\b|\\bsubscription\\b|\\blicensing\\b|\\bprivacy\\b|\\brequirements?\\b|\\bexport limits?\\b|\\bmanual control\\b|\\bpersonalization\\b|\\bpricing\\b|\\bfeatures?\\b|\\btool categories\\b).*");
     }
 
     private boolean isEditorialName(String value) {
         if (value == null || value.isBlank()) return true;
-        return value.matches("(?i).*(?:length\\s*(?:&|and)\\s*style|human[- ]like presenters?|narrated(?:/| or )presenter[- ]style videos?|presenter[- ]style videos?|automation\\s*(?:&|and|vs\\.?|versus)\\s*manual control|turn existing text|bulk personalization|full control|commercial licensing|resolution\\s*(?:&|and)\\s*export limits?|data privacy|gpu requirements?|project management software|document editors?|whiteboarding tools?|top tools|best tools|tool categories|recommended ai tools|purpose|step-by-step workflow).*");
+        return value.matches("(?i).*(?:length\\s*(?:&|and)\\s*style|human[- ]like presenters?|narrated(?:/| or )presenter[- ]style videos?|presenter[- ]style videos?|automation\\s*(?:&|and|vs\\.?|versus)\\s*manual control|turn existing text|bulk personalization|full control|commercial licensing|data[- ]privacy(?: needs)?|workflow integration|no subscription|resolution\\s*(?:&|and)\\s*export limits?|data privacy|gpu requirements?|project management software|document editors?|whiteboarding tools?|top tools|best tools|tool categories|recommended ai tools|purpose|step-by-step workflow).*");
     }
 
     private List<?> firstList(Map<?, ?> map, String... keys) {
