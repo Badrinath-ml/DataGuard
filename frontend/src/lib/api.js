@@ -7,7 +7,10 @@ async function request(path, options = {}) {
  const response = await fetch(API_URL + path, { ...options, headers });
  const type = response.headers.get('content-type') || '';
  const body = type.includes('application/json') ? await response.json() : await response.text();
- if (!response.ok) throw new Error(typeof body === 'string' ? body : body?.message || body?.error || 'Request failed');
+ if (!response.ok) {
+   const detail = typeof body === 'string' ? body.trim() : body?.message || body?.error || body?.detail;
+   throw new Error(detail || `Request failed (${response.status} ${response.statusText || ''}).`.trim());
+  }
  return body;
 }
 export function authenticate(path, payload) { if (!['/api/auth/register','/api/auth/login'].includes(path)) throw new Error('Unsupported authentication request.'); return request(path,{method:'POST',body:JSON.stringify(payload),auth:false}); }
