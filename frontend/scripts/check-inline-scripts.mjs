@@ -92,6 +92,9 @@ if (!html.includes("loadChatHistory();") || !html.includes("chatHistory = []; ch
 if (!workspace.includes("dataguard:radar-signed-out") || !workspace.includes("Saved sessions could not be loaded.")) {
   throw new Error('The history sidebar must clear account state on sign-out and explain session-load failures.');
 }
+if (!workspace.includes("dg-avatar-v3") || !workspace.includes("dg-theme-v3") || !workspace.includes("dg-out-v3")) {
+  throw new Error('The authenticated dashboard must expose the account menu, theme switch, and sign-out action.');
+}
 if (!workspace.includes("file.size>25*1024*1024") || !html.includes("dataguard-chat-session:")) {
   throw new Error('The active Code Check upload flow must enforce the 25 MB file limit and keep assistant sessions per account.');
 }
