@@ -31,8 +31,8 @@ public class RadarResponseNormalizer {
         } else {
             List<Map<String, Object>> tools = normalizeTools(firstList(result,
                     "tools", "recommendedTools", "results", "recommendations", "items", "aiTools", "products"), 24);
-            if (tools.size() < 5) {
-                throw new IllegalArgumentException("The AI response contained fewer than five usable named software products.");
+            if (tools.size() < 9) {
+                throw new IllegalArgumentException("The AI response contained fewer than nine usable named software products for the initial three-by-three card grid.");
             }
             result.put("tools", tools);
         }
