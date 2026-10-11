@@ -6,7 +6,8 @@
 - Frontend: React, Vite, React Router, Lucide
 - Backend: Java 21, Spring Boot, Spring Security, JWT
 - Database: Aiven PostgreSQL (required)
-- Optional AI explanations: Groq Chat Completions API
+- AI provider: Groq primary with Gemini Flash fallback for provider failures and structured-output repair
+- Database schema: Flyway migrations with Hibernate schema validation
 
 ## Architecture
 React UI → Spring Boot REST API → Spring Security/JWT → Spring Data JPA → Aiven PostgreSQL.
@@ -19,6 +20,9 @@ Copy the root `.env.example` to `.env`. From the Aiven Console, copy the Postgre
 Set `JWT_SECRET` to a private random value with at least 32 UTF-8 bytes. Set `GROQ_API_KEY` here only if AI explanations are enabled. Never commit `.env`, and never put database passwords, JWT secrets, or Groq keys into frontend variables or source code.
 
 The backend intentionally fails to start if Aiven connection settings are missing or invalid; this avoids silently saving accounts into a temporary in-memory database.
+The backend also validates `JWT_SECRET` at startup. Flyway applies the versioned PostgreSQL schema migration before Hibernate validates the entities; Hibernate no longer changes the production schema automatically. `/api/health` is a public, non-sensitive health check that returns `UP` only when PostgreSQL responds to `SELECT 1`.
+
+For AI Radar, configure at least one backend key (`GROQ_API_KEY` and/or `GEMINI_API_KEY`). Both keys are recommended so structured-output failures can be retried with the alternate provider. Provider calls have bounded timeouts; the UI reports an error rather than waiting forever.
 
 ## Start backend
 Requires Java 21 and Maven.
