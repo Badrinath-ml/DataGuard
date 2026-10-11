@@ -65,12 +65,7 @@ function collectTools(data,mode){
  }).slice(0,mode==='workflow'?15:24)
 }
 function budget(){const b=$('.opts .ch[data-g="b"].on');return b?b.textContent.trim().toLowerCase():'any price'}
-function visibleTools(arr){
- const b=budget();
- if(b.includes('free only'))return arr.filter(t=>pricing(t).kind==='FREE_ONLY');
- if(b.includes('under $20'))return arr.filter(t=>['FREE_ONLY','FREE_WITH_LIMITS','FREEMIUM'].includes(pricing(t).kind)||/\$\s?(?:0|[1-9]|1\d)(?:\.\d+)?\s*(?:\/|per month|monthly)/i.test(pricing(t).details));
- return arr
-}
+function visibleTools(arr){return arr.filter(findMatchesBudget)}
 function toolGrid(out,items,title){
  out.append(el('h3',title||('AI RADAR RESULTS · '+items.length+' TOOLS'),'d18-heading'));
  out.append(el('p','Each card represents one real AI tool, with its logo, description, pricing, and official website when available.','d18-workflow-tools-intro'));
