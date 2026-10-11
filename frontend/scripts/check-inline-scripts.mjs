@@ -56,4 +56,14 @@ if (!workspace.includes("Promise.allSettled([api('/api/ai/chat/sessions'),api('/
   throw new Error('Session history must load independently from review history.');
 }
 
+if (!radar.includes("if(selected.includes('free only'))return price.kind==='FREE_ONLY'")) {
+  throw new Error('Free-only pricing must exclude freemium and limited-free products.');
+}
+if (!radar.includes("label='Completely free'") || !radar.includes("label='Freemium'") || !radar.includes("label='Free with limits'")) {
+  throw new Error('Tool cards must distinguish completely free, freemium, and limited-free pricing.');
+}
+if (!html.includes("dataguard-chat-session:") || !html.includes("body: JSON.stringify({ title: 'AI Assistant' })")) {
+  throw new Error('The AI assistant must create and restore a persistent authenticated chat session.');
+}
+
 console.log('Validated ' + inlineScripts.length + ' inline scripts, auth wiring, single Radar controller, and independent history loading.');
