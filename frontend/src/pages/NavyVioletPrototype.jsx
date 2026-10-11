@@ -34,7 +34,7 @@ export default function NavyVioletPrototype({ initialPage = 'home' }) {
     <iframe
       ref={frame}
       title="DataGuard AI original navy and violet website"
-      src="/dataguard-navy-violet.html"
+      src={`/dataguard-navy-violet.html?apiBase=${encodeURIComponent(API_BASE)}`}
       onLoad={handleLoad}
       style={{ display: 'block', width: '100%', height: '100%', border: 0 }}
       allow="clipboard-read; clipboard-write"
