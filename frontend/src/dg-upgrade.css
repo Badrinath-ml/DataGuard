@@ -23,3 +23,40 @@
 .dg-workspace.dg-dark .dg-skel i{background:linear-gradient(90deg,#2a2552 25%,#3a3470 50%,#2a2552 75%);background-size:200% 100%}
 .dg-workspace.dg-dark .dg-scanbar{background:#ffffff10;color:#eeedff}
 @media(prefers-reduced-motion:reduce){.dg-workspace .dg-skel i,.dg-workspace .dg-scanbar::after{animation:none}}
+
+/* ===== Dark mode: complete coverage (readable text on every surface) ===== */
+.dg-workspace.dg-dark{--ink:#f2efff;--muted:#b9b4d9;--line:#40375f;--panel:#241e3f;--lav:#2d2650;--bg:#15112a;--purple:#9b80ff;--purple2:#b7a4ff;color-scheme:dark}
+.dg-dark .dg-sidebar,.dg-dark .dg-findings,.dg-dark .dg-review-chat,.dg-dark .dg-score-card,.dg-dark .dg-metric-card,.dg-dark .dg-feature-card,.dg-dark .dg-dropzone,.dg-dark .dg-resume button,.dg-dark .dg-project-banner,.dg-dark .dg-scan-status,.dg-dark .dg-radar-results,.dg-dark .dg-tool-card,.dg-dark .dg-flow-step,.dg-dark .dg-finding,.dg-dark .dg-fix-modal,.dg-dark .dg-assistant-popover,.dg-dark .dg-message{background:#241e3f;border-color:#40375f;color:#f2efff}
+.dg-dark .dg-main{background:linear-gradient(180deg,#2b2360 0,#1c1738 55%,#17132f 100%);border-color:#40375f}
+.dg-dark .dg-topbar{background:#1f1a38ee;border-color:#40375f;color:#f2efff}
+.dg-dark .dg-topbar small,.dg-dark .dg-user small,.dg-dark .dg-history-item small,.dg-dark .dg-radar-history small,.dg-dark .dg-empty-small,.dg-dark .dg-chat-empty,.dg-dark .dg-lead,.dg-dark .dg-radar-description,.dg-dark .dg-feature-card p,.dg-dark .dg-tool-card p,.dg-dark .dg-price-note,.dg-dark .dg-edit-hint,.dg-dark .dg-radar-examples>span,.dg-dark .dg-finding-body p,.dg-dark .dg-message>span,.dg-dark .dg-result-intro p{color:#b9b4d9}
+.dg-dark .dg-new,.dg-dark .dg-search,.dg-dark .dg-icon-button,.dg-dark .dg-outline,.dg-dark .dg-chat-form,.dg-dark .dg-radar-input,.dg-dark .dg-radar-examples button,.dg-dark .dg-category-pills button,.dg-dark .dg-filter-row select,.dg-dark .dg-code-preview,.dg-dark .dg-message.user{background:#2d2650;border-color:#40375f;color:#f2efff}
+.dg-dark .dg-switch,.dg-dark .dg-mode-switch{background:#2d2650}
+.dg-dark .dg-switch button,.dg-dark .dg-mode-switch button,.dg-dark .dg-history-heading,.dg-dark .dg-history-heading button,.dg-dark .dg-user>button{color:#c9c4e6}
+.dg-dark .dg-switch button.active,.dg-dark .dg-mode-switch button.active{background:#3b3266;color:#fff;box-shadow:none}
+.dg-dark .dg-switch button.active svg,.dg-dark .dg-mode-switch button.active svg{color:#b7a4ff}
+.dg-dark .dg-search input,.dg-dark .dg-chat-form input,.dg-dark .dg-radar-input textarea,.dg-dark .dg-filter-row select,.dg-dark .dg-filter-row label{background:transparent;color:#f2efff}
+.dg-dark .dg-search input::placeholder,.dg-dark .dg-chat-form input::placeholder,.dg-dark .dg-radar-input textarea::placeholder{color:#9a95bd}
+.dg-dark .dg-filter-row select option{background:#241e3f;color:#f2efff}
+.dg-dark .dg-history-heading,.dg-dark .dg-user{border-color:#40375f}
+.dg-dark .dg-history-item.active,.dg-dark .dg-history-item:hover,.dg-dark .dg-radar-history>button:not(.dg-history-mode):hover,.dg-dark .dg-radar-history>button.active,.dg-dark .dg-hgroup>button:not(.dg-history-mode):hover,.dg-dark .dg-hgroup>button.active{background:#3b3266}
+.dg-dark .dg-radar-history>button,.dg-dark .dg-radar-history span,.dg-dark .dg-hgroup>button,.dg-dark .dg-history-item strong,.dg-dark .dg-user strong,.dg-dark .dg-section-title h2,.dg-dark .dg-result-intro h2,.dg-dark .dg-tool-heading h2,.dg-dark .dg-finding-title strong,.dg-dark .dg-metric-card strong,.dg-dark .dg-score-card strong,.dg-dark .dg-score-card span,.dg-dark .dg-metric-card small,.dg-dark .dg-flow-step h3,.dg-dark .dg-flow-step p,.dg-dark .dg-fix-modal h2,.dg-dark .dg-fix-modal p,.dg-dark .dg-popover-head,.dg-dark .dg-dropzone strong,.dg-dark .dg-dropzone span,.dg-dark .dg-resume h2{color:#f2efff}
+.dg-dark .dg-hgroup .dg-history-group{color:#b7a4ff}.dg-dark .dg-hgroup.workflow .dg-history-group{color:#4fd9c3}
+.dg-dark .dg-history-mode,.dg-dark .dg-history-mode strong{color:#b7a4ff}.dg-dark .dg-history-mode.workflow,.dg-dark .dg-history-mode.workflow strong{color:#4fd9c3}
+.dg-dark .dg-history-mode:hover,.dg-dark .dg-history-mode:focus-visible{background:#3b3266;color:#fff}
+.dg-dark .dg-eyebrow{color:#b7a4ff}
+.dg-dark .dg-welcome h1,.dg-dark .dg-radar-hero h1,.dg-dark .dg-radar-hero p{color:#f2efff}.dg-dark .dg-welcome h1 span{color:#b7a4ff}
+.dg-dark .dg-feature-card>span,.dg-dark .dg-metric-card>span,.dg-dark .dg-file-icon,.dg-dark .dg-assistant-icon,.dg-dark .dg-tool-logo,.dg-dark .dg-section-title h2 span,.dg-dark .dg-score-ring:before{background:#2d2650;color:#c7b8ff}
+.dg-dark .dg-radar-graphic{background:#241e3f}
+.dg-dark .dg-category-pills button.selected{background:#4a3d8f;color:#fff;border-color:#9b80ff}
+.dg-dark .dg-price-pill,.dg-dark .dg-severity,.dg-dark .dg-history-item>b{background:#2d4a47;color:#8ff0d6}
+.dg-dark .dg-severity.high,.dg-dark .dg-severity.critical{background:#5a2a33;color:#ffb3b3}
+.dg-dark .dg-severity.medium{background:#5a4620;color:#ffd98a}
+.dg-dark .dg-fix-button{background:#3b3266;color:#e3dcff}
+.dg-dark .dg-complete-pill,.dg-dark .dg-resolved,.dg-dark .dg-status-check{background:#1f4b44;color:#8ff0d6}
+.dg-dark .dg-alert{background:#4a2630;border-color:#7a3a48;color:#ffd0d0}
+.dg-dark .dg-code-preview pre{color:#e6e1ff}
+.dg-dark .dg-flow-step small,.dg-dark .dg-tool-card-foot a,.dg-dark .dg-best-for{color:#b7a4ff}
+.dg-dark .dg-tool-card-foot>span{color:#b9b4d9}
+.dg-dark .dg-flow-connector{color:#b7a4ff}
+.dg-dark .dg-dark-button{background:#3b3266;color:#fff}
