@@ -1,76 +1,27 @@
 const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-
+function authData() { try { return JSON.parse(localStorage.getItem('dataguard-auth') || '{}'); } catch { return {}; } }
+export function getToken() { const token = authData().token; if (!token) throw new Error('Your session has expired. Please sign in again.'); return token; }
 async function request(path, options = {}) {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-      ...(options.headers || {}),
-    },
-  });
-  const contentType = response.headers.get('content-type') || '';
-  const body = contentType.includes('application/json') ? await response.json() : await response.text();
-  if (!response.ok) {
-    const message = typeof body === 'string' ? body : body?.message || body?.error || body?.detail || 'Request failed';
-    throw new Error(message);
-  }
-  return body;
+ const token = options.auth === false ? '' : (options.token || getToken());
+ const headers = { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...(token ? { Authorization: 'Bearer ' + token } : {}), ...(options.headers || {}) };
+ const response = await fetch(API_URL + path, { ...options, headers });
+ const type = response.headers.get('content-type') || '';
+ const body = type.includes('application/json') ? await response.json() : await response.text();
+ if (!response.ok) throw new Error(typeof body === 'string' ? body : body?.message || body?.error || 'Request failed');
+ return body;
 }
-
-// Spring Boot handles auth. Users and BCrypt password hashes live in Aiven PostgreSQL.
-export function authenticate(path, payload) {
-  if (path !== '/api/auth/register' && path !== '/api/auth/login') {
-    throw new Error('Unsupported authentication request.');
-  }
-  return request(path, { method: 'POST', body: JSON.stringify(payload) });
+export function authenticate(path, payload) { if (!['/api/auth/register','/api/auth/login'].includes(path)) throw new Error('Unsupported authentication request.'); return request(path,{method:'POST',body:JSON.stringify(payload),auth:false}); }
+export function getReviews() { return request('/api/projects/reviews'); }
+export function uploadProject(name,file) { const form = new FormData(); form.append('name',name); form.append('file',file); return request('/api/projects/upload',{method:'POST',body:form}); }
+export function generateFix(reviewId,findingId) { return request('/api/projects/reviews/'+reviewId+'/findings/'+findingId+'/fix',{method:'POST'}); }
+export function applyFix(reviewId,findingId) { return request('/api/projects/reviews/'+reviewId+'/findings/'+findingId+'/apply',{method:'POST'}); }
+export async function downloadReviewedProject(reviewId,name) {
+ const response = await fetch(API_URL+'/api/projects/reviews/'+reviewId+'/download',{headers:{Authorization:'Bearer '+getToken()}});
+ if (!response.ok) throw new Error('Could not download the reviewed project. The source may no longer be stored on the server.');
+ const url = URL.createObjectURL(await response.blob()); const a = document.createElement('a'); a.href=url; a.download=(name||'dataguard-project')+'-reviewed.zip'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-
-export function getReviews() {
-  let auth = {};
-  try { auth = JSON.parse(localStorage.getItem('dataguard-auth') || '{}'); } catch { /* malformed session */ }
-  if (!auth.token) throw new Error('Your session has expired. Please sign in again.');
-  return request('/api/projects/reviews', {
-    headers: { Authorization: `Bearer ${auth.token}` },
-  });
-}
-
-export function uploadProject(name, file, token) {
-  const formData = new FormData();
-  formData.append('name', name);
-  formData.append('file', file);
-  return request('/api/projects/upload', {
-    method: 'POST',
-    body: formData,
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export function generateFix(reviewId, findingId) {
-  let auth = {};
-  try { auth = JSON.parse(localStorage.getItem('dataguard-auth') || '{}'); } catch { /* malformed session */ }
-  return request(`/api/projects/reviews/${reviewId}/findings/${findingId}/fix`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${auth.token || ''}` },
-  });
-}
-
-export async function downloadReviewedProject(reviewId, projectName) {
-  let auth = {};
-  try { auth = JSON.parse(localStorage.getItem('dataguard-auth') || '{}'); } catch { /* malformed session */ }
-  const response = await fetch(`${API_URL}/api/projects/reviews/${reviewId}/download`, {
-    headers: { Authorization: `Bearer ${auth.token || ''}` },
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || 'Could not download the reviewed project.');
-  }
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = `${(projectName || 'dataguard-project').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-|-$/g, '') || 'dataguard-project'}-reviewed.zip`;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
+export function getChatSessions() { return request('/api/ai/chat/sessions'); }
+export function createChatSession(title,reviewId=null) { return request('/api/ai/chat/sessions',{method:'POST',body:JSON.stringify({title,reviewId})}); }
+export function getChatHistory(id) { return request('/api/ai/chat/history?sessionId='+encodeURIComponent(id)); }
+export function sendChatMessage(message,sessionId) { return request('/api/ai/chat',{method:'POST',body:JSON.stringify({message,sessionId})}); }
+export function sendRadarPrompt(prompt,mode,category,budget,sessionId=null) { return request('/api/ai/radar',{method:'POST',body:JSON.stringify({prompt,mode,category,budget,sessionId})}); }
