@@ -13,7 +13,7 @@ async function request(path, options = {}) {
  if (response.ok && typeof body === 'string' && /^\s*<(!doctype|html)/i.test(body)) throw new Error('The API returned a web page instead of data. Set VITE_API_URL to your backend URL (or add an /api proxy redirect) and redeploy the frontend.');
  if (!response.ok) {
    const detail = typeof body === 'string' ? body.trim() : body?.message || body?.error || body?.detail;
-   throw new Error(detail || (response.status === 403 ? 'The server refused this request (403). Sign out and sign in again; if it continues, check CORS_ALLOWED_ORIGINS and JWT_SECRET on the backend.' : `Request failed (${response.status} ${response.statusText || ''}).`.trim()));
+   throw new Error(detail || (response.status === 403 ? 'The server refused this request (403). Sign out and sign in again; if it continues, open /diagnostics to see which link is failing.' : `Request failed (${response.status} ${response.statusText || ''}).`.trim()));
   }
  return body;
 }
