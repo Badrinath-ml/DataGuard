@@ -31,6 +31,12 @@ if (!html.includes("document.querySelectorAll('.fc.si [data-login]')")) {
 if (!html.includes("document.querySelectorAll('.fc.su [data-login]')")) {
   throw new Error('The real email/password registration handler is missing.');
 }
+if (!/function upd\\(\\)\\{[^}]*if\\(navReg\\)[^}]*if\\(usrE\\)/.test(html)) {
+  throw new Error('Auth/profile UI updates must guard optional DOM elements before writing textContent.');
+}
+if (/^\\s*run\\(\\);\\s*$/m.test(html)) {
+  throw new Error('The legacy demo scan must not run automatically on page load.');
+}
 
 const radar = readFileSync(fileURLToPath(new URL('../public/dataguard-ai-radar.js', import.meta.url)), 'utf8');
 const legacyRadarScripts = [
