@@ -1,0 +1,28 @@
+/* Spacious, accessible AI Assistant workspace */
+.dg-assistant-backdrop{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:clamp(12px,3vw,36px);background:rgba(14,10,32,.48);backdrop-filter:blur(8px);}
+.dg-assistant-popover{position:relative;inset:auto;width:min(100%,1040px);height:min(820px,calc(100dvh - 72px));max-height:calc(100dvh - 24px);display:flex;flex-direction:column;overflow:hidden;border:1px solid #d8cff8;border-radius:24px;background:#fff;color:#17152e;box-shadow:0 30px 100px rgba(19,12,47,.32);}
+.dg-popover-head{flex:none;min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 24px;border-bottom:1px solid #e9e4f8;background:linear-gradient(135deg,#fff 0%,#f7f4ff 100%);font-size:16px;font-weight:800;}
+.dg-popover-head span{display:flex;align-items:center;gap:10px;}
+.dg-popover-head span svg{color:#8060fa;}
+.dg-popover-head button{display:grid;place-items:center;width:40px;height:40px;border:1px solid #e2def4;border-radius:12px;background:#fff;color:#626080;}
+.dg-popover-messages{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:clamp(18px,4vw,38px);background:radial-gradient(ellipse at top,#f7f4ff 0%,#fff 54%);}
+.dg-popover-messages .dg-message{max-width:min(82%,760px);margin:0 0 18px;padding:17px 19px;border:1px solid #e7e1f8;border-radius:18px;background:#fff;box-shadow:0 5px 18px rgba(39,26,81,.045);}
+.dg-popover-messages .dg-message.user{margin-left:auto;border-color:#d8ceff;background:#eee9ff;}
+.dg-popover-messages .dg-message>span{display:block;font-size:12px;font-weight:800;color:#7253df;letter-spacing:.02em;}
+.dg-popover-messages .dg-message p{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.75;color:#292542;}
+.dg-assistant-welcome{max-width:650px;margin:clamp(20px,8vh,90px) auto 24px;text-align:center;}
+.dg-assistant-welcome-icon{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 20px;border-radius:18px;background:#eee8ff;color:#7657f6;}
+.dg-assistant-welcome h2{margin:0 0 10px;font-size:clamp(25px,3vw,34px);letter-spacing:-.04em;color:#211b3a;}
+.dg-assistant-welcome>p{margin:0 auto;max-width:480px;color:#77738e;font-size:15px;line-height:1.6;}
+.dg-assistant-suggestions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:28px;}
+.dg-assistant-suggestions button{padding:11px 15px;border:1px solid #e1d9fb;border-radius:14px;background:#fff;color:#55458d;font-size:13px;font-weight:650;}
+.dg-assistant-suggestions button:hover{border-color:#a994ff;background:#f8f5ff;}
+.dg-assistant-thinking{display:flex;align-items:center;gap:10px;width:max-content;margin:10px 0;padding:12px 15px;border:1px solid #e7e1f8;border-radius:14px;background:#fff;color:#77738e;font-size:13px;}
+.dg-assistant-popover .dg-chat-form{flex:none;gap:12px;padding:16px 20px;border-top:1px solid #e9e4f8;background:#fff;}
+.dg-assistant-popover .dg-chat-form input{min-height:52px;padding:13px 16px;border:1px solid #e2def4;border-radius:14px;background:#faf9ff;font-size:15px;}
+.dg-assistant-popover .dg-chat-form input:focus{outline:2px solid #a994ff;outline-offset:1px;}
+.dg-assistant-popover .dg-chat-form button{flex:none;width:52px;height:52px;border-radius:15px;background:linear-gradient(135deg,#a084ff,#7958f6);}
+.dg-assistant-disclaimer{flex:none;padding:0 20px 14px;text-align:center;color:#8b87a0;background:#fff;font-size:11px;}
+.dg-assistant-popover button:focus-visible{outline:3px solid #a994ff;outline-offset:2px;}
+@media(max-width:640px){.dg-assistant-backdrop{padding:0;align-items:stretch;}.dg-assistant-popover{width:100%;height:100dvh;max-height:100dvh;border-radius:0;border:0;}.dg-popover-head{min-height:64px;padding:12px 16px;}.dg-popover-messages{padding:16px 12px;}.dg-popover-messages .dg-message{max-width:94%;padding:13px 14px;}.dg-assistant-welcome{margin:8vh auto 20px;padding:0 8px;}.dg-assistant-suggestions{display:grid;grid-template-columns:1fr;}.dg-assistant-suggestions button{width:100%;text-align:left;}.dg-assistant-popover .dg-chat-form{padding:12px;gap:8px;}.dg-assistant-popover .dg-chat-form input{min-width:0;}.dg-assistant-disclaimer{padding-bottom:max(12px,env(safe-area-inset-bottom));}}
+@media(prefers-reduced-motion:reduce){.dg-assistant-backdrop *{scroll-behavior:auto!important;animation:none!important;transition:none!important;}}
