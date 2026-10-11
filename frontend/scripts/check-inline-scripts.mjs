@@ -92,5 +92,8 @@ if (!html.includes("loadChatHistory();") || !html.includes("chatHistory = []; ch
 if (!workspace.includes("dataguard:radar-signed-out") || !workspace.includes("Saved sessions could not be loaded.")) {
   throw new Error('The history sidebar must clear account state on sign-out and explain session-load failures.');
 }
+if (!workspace.includes("file.size>25*1024*1024") || !html.includes("dataguard-chat-session:")) {
+  throw new Error('The active Code Check upload flow must enforce the 25 MB file limit and keep assistant sessions per account.');
+}
 
 console.log('Validated ' + inlineScripts.length + ' inline scripts, auth wiring, single Radar controller, and independent history loading.');
