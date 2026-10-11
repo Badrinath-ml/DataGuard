@@ -32,4 +32,21 @@ if (!html.includes("document.querySelectorAll('.fc.su [data-login]')")) {
   throw new Error('The real email/password registration handler is missing.');
 }
 
-console.log('Validated ' + inlineScripts.length + ' inline scripts and critical dashboard/auth wiring.');
+const radar = readFileSync(fileURLToPath(new URL('../public/dataguard-ai-radar.js', import.meta.url)), 'utf8');
+const legacyRadarScripts = [
+  '../public/dataguard-functional-fixes.js',
+  '../public/dataguard-followup-fixes.js',
+  '../public/dataguard-pr17-fixes.js',
+].map((path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8'));
+if (radar.includes("$('.seg button[data-m]').forEach")) {
+  throw new Error('Radar history restoration must use the multi-element selector for segment buttons.');
+}
+if (legacyRadarScripts.some((script) => /wireUpload\\(\\);wireRadar\\(\\)/.test(script))) {
+  throw new Error('Legacy scripts must not attach competing AI Radar handlers.');
+}
+const workspace = readFileSync(fileURLToPath(new URL('../public/dataguard-chat-workspace.js', import.meta.url)), 'utf8');
+if (!workspace.includes("Promise.allSettled([api('/api/ai/chat/sessions'),api('/api/projects/reviews')])")) {
+  throw new Error('Session history must load independently from review history.');
+}
+
+console.log('Validated ' + inlineScripts.length + ' inline scripts, auth wiring, single Radar controller, and independent history loading.');
