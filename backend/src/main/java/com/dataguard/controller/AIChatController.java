@@ -17,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,6 +45,9 @@ public class AIChatController {
     private final ReviewRepository reviewRepository;
     private final FindingRepository findingRepository;
     private final com.dataguard.service.RadarResponseNormalizer radarNormalizer;
+
+    @Value("${dataguard.storage.directory:${java.io.tmpdir}}")
+    private String storageDirectory = System.getProperty("java.io.tmpdir");
     private static final Logger log = LoggerFactory.getLogger(AIChatController.class);
 
     public AIChatController(RadarChatProvider provider, UserRepository userRepository,
@@ -206,7 +210,7 @@ public class AIChatController {
     }
 
     private void appendUploadedSource(StringBuilder system, Review review, List<Finding> findings) {
-        Path root = Path.of(System.getProperty("java.io.tmpdir"),
+        Path root = Path.of(storageDirectory,
                 "dataguard_" + review.getProject().getId()).toAbsolutePath().normalize();
         if (!Files.isDirectory(root)) {
             system.append("\nUploaded source files are no longer present on this server. Do not claim to have inspected full source.\n");
