@@ -31,5 +31,72 @@ if (!html.includes("document.querySelectorAll('.fc.si [data-login]')")) {
 if (!html.includes("document.querySelectorAll('.fc.su [data-login]')")) {
   throw new Error('The real email/password registration handler is missing.');
 }
+if (!html.includes("if(navReg){navReg.textContent") || !html.includes("if(usrE)usrE.textContent")) {
+  throw new Error('Auth/profile UI updates must guard optional DOM elements before writing textContent.');
+}
+if (html.split('\n').some((line) => line.trim() === 'run();')) {
+  throw new Error('The legacy demo scan must not run automatically on page load.');
+}
 
-console.log('Validated ' + inlineScripts.length + ' inline scripts and critical dashboard/auth wiring.');
+const externalScripts = [
+  '../public/dataguard-ai-radar.js',
+  '../public/dataguard-chat-workspace.js',
+  '../public/dataguard-functional-fixes.js',
+  '../public/dataguard-followup-fixes.js',
+  '../public/dataguard-pr17-fixes.js',
+].map((path) => ({ path, code: readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8') }));
+for (const script of externalScripts) {
+  try {
+    new Function(script.code);
+  } catch (error) {
+    throw new Error('External script ' + script.path + ' failed syntax validation: ' + error.message);
+  }
+}
+
+const radar = readFileSync(fileURLToPath(new URL('../public/dataguard-ai-radar.js', import.meta.url)), 'utf8');
+const legacyRadarScripts = [
+  '../public/dataguard-functional-fixes.js',
+  '../public/dataguard-followup-fixes.js',
+  '../public/dataguard-pr17-fixes.js',
+].map((path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8'));
+const radarWithoutMultiSelector = radar.replaceAll("$('.seg button[data-m]').forEach", '');
+if (radarWithoutMultiSelector.includes("$('.seg button[data-m]').forEach")) {
+  throw new Error('Radar history restoration must use the multi-element selector for segment buttons.');
+}
+if (legacyRadarScripts.some((script) => /wireUpload\(\);wireRadar\(\)/.test(script))) {
+  throw new Error('Legacy scripts must not attach competing AI Radar handlers.');
+}
+const workspace = readFileSync(fileURLToPath(new URL('../public/dataguard-chat-workspace.js', import.meta.url)), 'utf8');
+if (!workspace.includes("Promise.allSettled([api('/api/ai/chat/sessions'),api('/api/projects/reviews')])")) {
+  throw new Error('Session history must load independently from review history.');
+}
+
+if (!radar.includes("if(selected.includes('free only'))return price.kind==='FREE_ONLY'")) {
+  throw new Error('Free-only pricing must exclude freemium and limited-free products.');
+}
+if (!radar.includes("label='Completely free'") || !radar.includes("label='Freemium'") || !radar.includes("label='Free with limits'")) {
+  throw new Error('Tool cards must distinguish completely free, freemium, and limited-free pricing.');
+}
+if (!radar.includes("findVisibleCount=9") || !radar.includes("grid-template-columns:repeat(3,minmax(0,1fr))")) {
+  throw new Error('Find Tools must start with a three-column grid of nine individually named product cards.');
+}
+if (!radar.includes("const officialUrl=domain?'https://'+domain:") || !radar.includes("function drawWorkflowEdges(map)")) {
+  throw new Error('Known tools must prefer official domains and workflows must render connected nodes.');
+}
+if (!html.includes("dataguard-chat-session:") || !html.includes("body: JSON.stringify({ title: 'AI Assistant' })")) {
+  throw new Error('The AI assistant must create and restore a persistent authenticated chat session.');
+}
+if (!html.includes("loadChatHistory();") || !html.includes("chatHistory = []; chatSessionId = null; msgs.replaceChildren();")) {
+  throw new Error('Authentication must restore chat history and clear it when the account changes or signs out.');
+}
+if (!workspace.includes("dataguard:radar-signed-out") || !workspace.includes("Saved sessions could not be loaded.")) {
+  throw new Error('The history sidebar must clear account state on sign-out and explain session-load failures.');
+}
+if (!workspace.includes("dg-avatar-v3") || !workspace.includes("dg-theme-v3") || !workspace.includes("dg-out-v3")) {
+  throw new Error('The authenticated dashboard must expose the account menu, theme switch, and sign-out action.');
+}
+if (!workspace.includes("file.size>25*1024*1024") || !html.includes("dataguard-chat-session:")) {
+  throw new Error('The active Code Check upload flow must enforce the 25 MB file limit and keep assistant sessions per account.');
+}
+
+console.log('Validated ' + inlineScripts.length + ' inline scripts, auth wiring, single Radar controller, and independent history loading.');

@@ -53,8 +53,8 @@ public class AIService {
                 aiExplanationRepository.save(explanation);
             } catch (Exception exception) {
                 // AI is an enhancement; deterministic review results must still be returned.
-                log.warn("Groq explanation failed for finding {}: {}",
-                        finding.getId(), exception.getMessage());
+                log.warn("AI explanation failed for finding {} ({})",
+                        finding.getId(), exception.getClass().getSimpleName());
             }
         }
     }

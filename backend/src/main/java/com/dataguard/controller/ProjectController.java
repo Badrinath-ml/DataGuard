@@ -4,17 +4,16 @@ import com.dataguard.dto.FixResponse;
 import com.dataguard.dto.ReviewResponse;
 import com.dataguard.entity.Finding;
 import com.dataguard.repository.FindingRepository;
-import com.dataguard.repository.ProjectRepository;
 import com.dataguard.repository.ReviewRepository;
 import com.dataguard.entity.Review;
 import com.dataguard.entity.User;
 import com.dataguard.repository.UserRepository;
 import com.dataguard.service.ProjectService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
@@ -38,30 +37,47 @@ public class ProjectController {
     private final ProjectService projectService;
     private final UserRepository userRepository;
     private final FindingRepository findingRepository;
-    private final ProjectRepository projectRepository;
     private final ReviewRepository reviewRepository;
-    private final PasswordEncoder passwordEncoder;
+
+    @Value("${dataguard.storage.directory:${java.io.tmpdir}}")
+    private String storageDirectory = System.getProperty("java.io.tmpdir");
 
     @PostMapping("/upload")
     public ResponseEntity<?> uploadProject(
             @RequestParam("file") MultipartFile file,
             @RequestParam("name") String name,
             Authentication authentication) {
-        
+
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            return ResponseEntity.status(401).body(Map.of("message", "Please sign in before uploading a project."));
+        }
+        String email = authenticationEmail(authentication);
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "Your account was not found. Please sign in again."));
+        }
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Choose a non-empty ZIP file to review."));
+        }
+        if (name == null || name.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Enter a project name."));
+        }
+        if (file.getOriginalFilename() == null || !file.getOriginalFilename().toLowerCase().endsWith(".zip")) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Only ZIP files are supported."));
+        }
+
         try {
-            // Find current user from JWT token
-                String email = authenticationEmail(authentication);
-                User user = userRepository.findByEmail(email).orElseGet(() -> provisionUser(email));
-
-            if (file.getOriginalFilename() == null || !file.getOriginalFilename().toLowerCase().endsWith(".zip")) {
-                return ResponseEntity.badRequest().body("Only ZIP files are supported.");
-            }
-
-            Review reviewResult = projectService.processProjectUpload(file, user, name);
+            Review reviewResult = projectService.processProjectUpload(file, user, name.trim());
             return ResponseEntity.ok(ReviewResponse.from(reviewResult, findingRepository.findByReviewId(reviewResult.getId())));
-
-        } catch (IOException e) {
-            return ResponseEntity.internalServerError().body("Failed to process uploaded file: " + e.getMessage());
+        } catch (ProjectService.InvalidArchiveException exception) {
+            return ResponseEntity.badRequest().body(Map.of("message", exception.getMessage()));
+        } catch (IOException exception) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("message", "The server could not read or store the uploaded ZIP."));
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.status(503)
+                    .body(Map.of("message", exception.getMessage() == null
+                            ? "The configured review engine is unavailable. Check backend logs." : exception.getMessage()));
         }
     }
 
@@ -73,15 +89,6 @@ public class ProjectController {
             }
         }
         return authentication.getName();
-    }
-
-    private User provisionUser(String email) {
-        User user = new User();
-        user.setEmail(email);
-        user.setFullName(email);
-        user.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
-        user.setRole(User.Role.DEVELOPER);
-        return userRepository.save(user);
     }
 
     @GetMapping("/reviews")
@@ -96,17 +103,17 @@ public class ProjectController {
     }
 
     @GetMapping("/reviews/{reviewId}/download")
-    public ResponseEntity<?> downloadReviewedProject(@PathVariable Long reviewId, Authentication authentication) {
+    public ResponseEntity<StreamingResponseBody> downloadReviewedProject(@PathVariable Long reviewId, Authentication authentication) {
         var review = reviewRepository.findById(reviewId).orElse(null);
         if (review == null) return ResponseEntity.notFound().build();
         var project = review.getProject();
         Long projectId = project.getId();
         if (!project.getUser().getEmail().equalsIgnoreCase(authenticationEmail(authentication))) {
-            return ResponseEntity.status(403).body("You do not have access to this project.");
+            return ResponseEntity.status(403).build();
         }
-        Path root = Path.of(System.getProperty("java.io.tmpdir"), "dataguard_" + projectId).toAbsolutePath().normalize();
+        Path root = Path.of(storageDirectory, "dataguard_" + projectId).toAbsolutePath().normalize();
         if (!Files.isDirectory(root)) {
-            return ResponseEntity.status(410).body("Temporary project files are no longer available. Please upload the ZIP again.");
+            return ResponseEntity.status(410).build();
         }
         String safeName = project.getName() == null ? "dataguard-project" : project.getName().replaceAll("[^A-Za-z0-9_-]", "-");
         StreamingResponseBody stream = output -> {
@@ -176,7 +183,7 @@ public class ProjectController {
             return ResponseEntity.ok(Map.of("message", "This finding is already marked resolved.", "status", "RESOLVED"));
         }
 
-        Path root = Path.of(System.getProperty("java.io.tmpdir"),
+        Path root = Path.of(storageDirectory,
                 "dataguard_" + finding.getReview().getProject().getId()).toAbsolutePath().normalize();
         if (!Files.isDirectory(root)) {
             return ResponseEntity.status(410).body(Map.of("message", "The uploaded project files are no longer available. Upload the ZIP again."));
@@ -257,13 +264,11 @@ public class ProjectController {
         }
     }
 
-    public ProjectController(ProjectService projectService, UserRepository userRepository, FindingRepository findingRepository,
-                             ProjectRepository projectRepository, ReviewRepository reviewRepository, PasswordEncoder passwordEncoder) {
+    public ProjectController(ProjectService projectService, UserRepository userRepository,
+                             FindingRepository findingRepository, ReviewRepository reviewRepository) {
         this.projectService = projectService;
         this.userRepository = userRepository;
         this.findingRepository = findingRepository;
-        this.projectRepository = projectRepository;
         this.reviewRepository = reviewRepository;
-        this.passwordEncoder = passwordEncoder;
     }
 }

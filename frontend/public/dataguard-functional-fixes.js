@@ -27,5 +27,5 @@ async function radar(mode,prompt){prompt=String(prompt||'').trim();if(!prompt)re
 function wireRadar(){const q=$('#fq');if($('#ff'))$('#ff').onclick=()=>radar('find',q?.value||'');if(q)q.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();radar('find',q.value)}});if($('#wf'))$('#wf').onclick=()=>radar('workflow',$('#wq')?.value||q?.value||'');$$('.pl2 button').forEach(b=>b.onclick=()=>radar('find',(q?.value||'')+' '+(b.dataset.x||b.textContent)));$$('.opts .ch').forEach(b=>b.addEventListener('click',()=>{if(tools.length)render(tools)}));$$('.seg button[data-m]').forEach(b=>b.addEventListener('click',()=>{$$('.seg button[data-m]').forEach(x=>x.classList.toggle('on',x===b));if($('#pw'))$('#pw').hidden=b.dataset.m!=='flow'}));history()}
 const link=document.createElement('link');link.rel='stylesheet';link.href='/dataguard-functional-fixes.css';document.head.append(link);
 const old=$('.dg-review-actions');if(old){old.id='dg-report-actions';old.replaceChildren();old.hidden=true}
-wireUpload();wireRadar();zero();
+wireUpload();zero();
 })();

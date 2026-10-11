@@ -374,7 +374,7 @@ const USERS={google:{n:'Developer',e:'developer@gmail.com',l:'Google'},email:{n:
 function finish(p){loggedIn=true;user=USERS[p];const t=pending||'check';pending=null;$('#lnote').hidden=true;upd();go(t)}
 function signIn(p,btn){/* REAL: Google -> signInWithPopup(auth,new GoogleAuthProvider());  GitHub -> signInWithPopup(auth,new GithubAuthProvider()) */const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spn2"></span> Signing in with '+USERS[p].l+'…';setTimeout(()=>{btn.disabled=false;btn.innerHTML=old;finish(p)},1000)}
 function signOutUser(){/* REAL: await signOut(auth) */loggedIn=false;user=null;upd();go('home')}
-function upd(){if($('#who'))$('#who').textContent=loggedIn?'🔒 Logged in (tap to log out)':'🔓 Logged out';$('#navReg').textContent=loggedIn?'Dashboard':'Register';$('#navReg').dataset.pg=loggedIn?'check':'auth';$('#navLog').hidden=loggedIn;const u=user||USERS.email;$('#usrE').textContent=u.e;applyPrefs();$('#umP').textContent='SIGNED IN WITH '+(user?user.l.toUpperCase():'EMAIL')}
+function upd(){const who=$('#who'),navReg=$('#navReg'),navLog=$('#navLog'),usrE=$('#usrE'),umP=$('#umP');if(who)who.textContent=loggedIn?'🔒 Logged in (tap to log out)':'🔓 Logged out';if(navReg){navReg.textContent=loggedIn?'Dashboard':'Register';navReg.dataset.pg=loggedIn?'check':'auth'}if(navLog)navLog.hidden=loggedIn;const u=user||USERS.email;if(usrE)usrE.textContent=u.e;if(typeof applyPrefs==='function')applyPrefs();if(umP)umP.textContent='SIGNED IN WITH '+String(user?.l||'email').toUpperCase()}
 function go(p){if(['check','radar'].includes(p)&&!loggedIn){pending=p;$('#lnote').hidden=false;$('#lnote').textContent=p==='radar'?'Please sign in to use AI Radar. We will take you there right after.':'Please sign in to upload and check your project.';p='auth'}else if(p==='home'){pending=null}else if(p==='auth'&&!pending){$('#lnote').hidden=true}
 if(['check','radar'].includes(p)){show('dash');setDv(p)}else show(p);$$('.pg').forEach(b=>b.classList.toggle('on',b.dataset.pg===p))}
 function setDv(v){app.dataset.v=v;$$('[data-dv]').forEach(a=>a.classList.toggle('on',a.dataset.dv===v));$$('.pg').forEach(b=>b.classList.toggle('on',b.dataset.pg===v));$('#rp').classList.remove('on')}
@@ -478,7 +478,8 @@ $('#dpf').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileRe
 $('#mp').onclick=()=>openPers('p');$('#mc').onclick=()=>openPers('c');$('#chs').onclick=()=>openPers('c');$$('.tdp').forEach(e=>e.onclick=()=>openPers('p'));
 $('#pmx').onclick=$('#pmd').onclick=()=>$('#pm').classList.remove('on');$('#pm').onclick=e=>{if(e.target.id==='pm')$('#pm').classList.remove('on')};
 applyPrefs();
-run();
+// The real scan starts only after a user uploads a project; never start the demo scan.
+ring(0);
 </script>
 
 <script>
@@ -514,15 +515,52 @@ run();
     if (!response.ok) throw new Error(typeof body === 'string' ? (body || 'Request failed (' + response.status + ')') : body.message || body.error || 'Request failed (' + response.status + ')');
     return body;
   }
+  function chatSessionStorageKey() {
+    const email = String(session().email || '').trim().toLowerCase();
+    return email ? 'dataguard-chat-session:' + email : null;
+  }
   async function loadChatHistory() {
     if (!token()) return;
+    const key = chatSessionStorageKey();
+    let sessionId = null;
+    let result = null;
+    if (key) {
+      try { sessionId = localStorage.getItem(key); } catch (_) {}
+    }
+    if (sessionId) {
+      try {
+        result = await api('/api/ai/chat/history?sessionId=' + encodeURIComponent(sessionId));
+      } catch (_) {
+        sessionId = null;
+        if (key) { try { localStorage.removeItem(key); } catch (_) {} }
+      }
+    }
     try {
-      const result = await api('/api/ai/chat/history');
-      chatSessionId = result.sessionId || null;
+      if (!result) {
+        const sessions = await api('/api/ai/chat/sessions');
+        const existing = Array.isArray(sessions)
+          ? sessions.find(item => String(item.contextType || 'CODE_CHECK').toUpperCase() !== 'AI_RADAR')
+          : null;
+        if (existing && existing.sessionId) {
+          sessionId = existing.sessionId;
+        } else {
+          const created = await api('/api/ai/chat/sessions', {
+            method: 'POST',
+            body: JSON.stringify({ title: 'AI Assistant' })
+          });
+          sessionId = created.sessionId;
+        }
+        if (!sessionId) throw new Error('The server did not return a chat session ID.');
+        result = await api('/api/ai/chat/history?sessionId=' + encodeURIComponent(sessionId));
+        if (key) { try { localStorage.setItem(key, sessionId); } catch (_) {} }
+      }
+      chatSessionId = result.sessionId || sessionId || null;
       chatHistory = Array.isArray(result.messages) ? result.messages : [];
+      msgs.replaceChildren();
       restoreChat();
     } catch (error) {
       console.error('Could not load AI conversation history:', error);
+      chatSessionId = null;
     }
   }
   function showError(id, message) { const node = $id(id); if (node) { node.textContent = message || ''; node.style.color = message ? 'var(--bad)' : ''; } }
@@ -530,10 +568,12 @@ run();
   function applySession(auth) {
     localStorage.setItem('dataguard-auth', JSON.stringify(auth));
     loggedIn = true; user = userFromAuth(auth); pending = pending || 'check';
+    chatHistory = []; chatSessionId = null; msgs.replaceChildren();
     if (typeof P !== 'undefined') { P.name = user.n; try { localStorage.setItem('dg-prefs', JSON.stringify(P)); } catch (_) {} }
     if (typeof upd === 'function') upd();
     const destination = pending || 'check'; pending = null;
     go(destination);
+    loadChatHistory();
   }
   async function submitAuth(mode) {
     const register = mode === 'register';
@@ -562,6 +602,7 @@ run();
   }
   window.signOutUser = function () {
     localStorage.removeItem('dataguard-auth'); loggedIn = false; user = null; pending = null;
+    chatHistory = []; chatSessionId = null; msgs.replaceChildren();
     document.dispatchEvent(new Event('dataguard:radar-signed-out'));
     show('home'); if (typeof upd === 'function') upd(); go('home');
   };
@@ -575,7 +616,7 @@ run();
   fileInput.type = 'file'; fileInput.accept = '.zip,application/zip,application/x-zip-compressed'; fileInput.hidden = true; fileInput.id = 'dg-project-upload';
   document.body.appendChild(fileInput);
   const originalRun = window.run;
-  clearInterval(tm); msgs.innerHTML = ''; $('#pbi').style.width = '0%'; $('#pc').textContent = '0%'; st('done', token() ? 'Ready · select a ZIP to review' : 'Sign in to begin a review');
+  if (tm) clearInterval(tm); if (msgs) msgs.innerHTML = ''; if ($('#pbi')) $('#pbi').style.width = '0%'; if ($('#pc')) $('#pc').textContent = '0%'; if ($('#fxd')) $('#fxd').textContent = '0'; if ($('#cnt')) $('#cnt').textContent = '0 of 0 applied'; if (typeof ring === 'function') ring(0); st('done', token() ? 'Ready · select a ZIP to review' : 'Sign in to begin a review');
   const fakeApplyAll = $id('aa'); if (fakeApplyAll) fakeApplyAll.hidden = true;
   const fakePatch = $id('dp'); if (fakePatch) fakePatch.hidden = true;
   const downloadButton = document.createElement('button'); downloadButton.id = 'dg-download-review'; downloadButton.className = 'pr'; downloadButton.textContent = 'Download reviewed ZIP'; downloadButton.hidden = true; const actionFooter = document.querySelector('.fx .ff'); if (actionFooter) actionFooter.insertBefore(downloadButton, actionFooter.firstChild);

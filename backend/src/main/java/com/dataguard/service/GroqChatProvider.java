@@ -9,6 +9,10 @@ import org.springframework.web.client.RestClientResponseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
+
+import java.net.http.HttpClient;
+import java.time.Duration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +27,7 @@ public class GroqChatProvider implements RadarChatProvider {
     private final String groqModel;
     private final String geminiApiKey;
     private final String geminiModel;
+    private final ThreadLocal<String> lastSuccessfulProvider = new ThreadLocal<>();
 
     public GroqChatProvider(
             RestClient.Builder restClientBuilder,
@@ -32,8 +37,13 @@ public class GroqChatProvider implements RadarChatProvider {
             @Value("${gemini.base-url:https://generativelanguage.googleapis.com/v1beta}") String geminiBaseUrl,
             @Value("${gemini.api-key:}") String geminiApiKey,
             @Value("${gemini.model:gemini-2.5-flash}") String geminiModel) {
-        this.groqClient = restClientBuilder.clone().baseUrl(groqBaseUrl).build();
-        this.geminiClient = restClientBuilder.clone().baseUrl(geminiBaseUrl).build();
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(Duration.ofSeconds(30));
+        this.groqClient = restClientBuilder.clone().requestFactory(requestFactory).baseUrl(groqBaseUrl).build();
+        this.geminiClient = restClientBuilder.clone().requestFactory(requestFactory).baseUrl(geminiBaseUrl).build();
         this.groqApiKey = groqApiKey == null ? "" : groqApiKey.trim();
         this.groqModel = groqModel;
         this.geminiApiKey = geminiApiKey == null ? "" : geminiApiKey.trim();
@@ -55,7 +65,54 @@ public class GroqChatProvider implements RadarChatProvider {
         return completeInternal(turns, true);
     }
 
+    @Override
+    public String completeJsonFallback(List<Turn> turns) {
+        if (turns == null || turns.isEmpty()) {
+            throw new IllegalArgumentException("At least one chat message is required.");
+        }
+        String previous = lastSuccessfulProvider.get();
+        lastSuccessfulProvider.remove();
+        List<Map<String, String>> messages = toGroqMessages(turns);
+        List<String> order = "groq".equals(previous)
+                ? List.of("gemini", "groq")
+                : "gemini".equals(previous) ? List.of("groq", "gemini") : List.of("groq", "gemini");
+        RuntimeException lastFailure = null;
+        for (String candidate : order) {
+            if ("groq".equals(candidate) && !groqApiKey.isBlank()) {
+                try {
+                    String response = completeWithGroq(messages, true);
+                    lastSuccessfulProvider.set("groq");
+                    return response;
+                } catch (RuntimeException failure) {
+                    logProviderFailure("Groq structured-output fallback", failure);
+                    lastFailure = failure;
+                }
+            } else if ("gemini".equals(candidate) && !geminiApiKey.isBlank()) {
+                try {
+                    String response = completeWithGemini(turns, true);
+                    lastSuccessfulProvider.set("gemini");
+                    return response;
+                } catch (RuntimeException failure) {
+                    logProviderFailure("Gemini structured-output fallback", failure);
+                    lastFailure = failure;
+                }
+            }
+        }
+        lastSuccessfulProvider.remove();
+        if (lastFailure != null) {
+            throw new IllegalStateException("No configured AI provider could repair the structured response.", lastFailure);
+        }
+        throw new IllegalStateException("No AI provider is configured for structured-output repair.");
+    }
+
+    private List<Map<String, String>> toGroqMessages(List<Turn> turns) {
+        return turns.stream()
+                .map(turn -> Map.of("role", turn.role(), "content", turn.content()))
+                .toList();
+    }
+
     private String completeInternal(List<Turn> turns, boolean jsonMode) {
+        lastSuccessfulProvider.remove();
         if (turns == null || turns.isEmpty()) {
             throw new IllegalArgumentException("At least one chat message is required.");
         }
@@ -66,7 +123,9 @@ public class GroqChatProvider implements RadarChatProvider {
         RuntimeException groqFailure = null;
         if (!groqApiKey.isBlank()) {
             try {
-                return completeWithGroq(messages, jsonMode);
+                String response = completeWithGroq(messages, jsonMode);
+                lastSuccessfulProvider.set("groq");
+                return response;
             } catch (RuntimeException ex) {
                 groqFailure = ex;
                 logProviderFailure("Groq", ex);
@@ -75,7 +134,9 @@ public class GroqChatProvider implements RadarChatProvider {
 
         if (!geminiApiKey.isBlank()) {
             try {
-                return completeWithGemini(turns, jsonMode);
+                String response = completeWithGemini(turns, jsonMode);
+                lastSuccessfulProvider.set("gemini");
+                return response;
             } catch (RuntimeException geminiFailure) {
                 logProviderFailure("Gemini", geminiFailure);
                 if (groqFailure != null) geminiFailure.addSuppressed(groqFailure);

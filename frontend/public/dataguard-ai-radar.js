@@ -65,12 +65,7 @@ function collectTools(data,mode){
  }).slice(0,mode==='workflow'?15:24)
 }
 function budget(){const b=$('.opts .ch[data-g="b"].on');return b?b.textContent.trim().toLowerCase():'any price'}
-function visibleTools(arr){
- const b=budget();
- if(b.includes('free only')){const a=arr.filter(t=>pricing(t).kind==='FREE_ONLY');return a.length?a:arr}
- if(b.includes('under $20')){const a=arr.filter(t=>['FREE_ONLY','FREE_WITH_LIMITS','FREE_TRIAL_THEN_PAID','FREEMIUM'].includes(pricing(t).kind)||/\$\s?(?:0|[1-9]|1\d)(?:\.\d+)?\s*(?:\/|per month|monthly)/i.test(pricing(t).details));return a.length?a:arr}
- return arr
-}
+function visibleTools(arr){return arr.filter(findMatchesBudget)}
 function toolGrid(out,items,title){
  out.append(el('h3',title||('AI RADAR RESULTS · '+items.length+' TOOLS'),'d18-heading'));
  out.append(el('p','Each card represents one real AI tool, with its logo, description, pricing, and official website when available.','d18-workflow-tools-intro'));
@@ -81,28 +76,35 @@ function toolGrid(out,items,title){
  out.append(grid)
 }
 function findPricing(tool){
- const kind=String(tool.pricingType||'').toUpperCase().replace(/[\s-]+/g,'_'),details=String(tool.pricingDetails||'');
- let hasFree=tool.hasFreePlan;
- if(hasFree===null){
-  if(kind==='FREE_ONLY'||kind==='FREE_WITH_LIMITS'||kind==='FREEMIUM'||kind.includes('FREE_TIER'))hasFree=true;
-  else if(kind==='PAID_SUBSCRIPTION'||kind==='PAID_USAGE'||kind==='FREE_TRIAL_THEN_PAID')hasFree=false;
-  else if(/\bfree plan\b|\bfree tier\b|\bfreemium\b|\bfree with limits\b|\blimited free\b/i.test(details))hasFree=true;
-  else if(/\bpaid only\b|\bno free plan\b|\bsubscription required\b/i.test(details))hasFree=false;
+ const rawKind=String(tool.pricingType||'').toUpperCase().replace(/[\s-]+/g,'_');
+ const details=String(tool.pricingDetails||'');
+ let kind=rawKind;
+ if(!kind||kind==='UNKNOWN'){
+  if(/\bcompletely free\b|\bfree forever\b|\bfree only\b/i.test(details))kind='FREE_ONLY';
+  else if(/\bfree with limits\b|\blimited free\b|\bcredits\b/i.test(details))kind='FREE_WITH_LIMITS';
+  else if(/\bfreemium\b|\bfree plan\b|\bfree tier\b/i.test(details))kind='FREEMIUM';
+  else if(/\bfree trial\b/i.test(details))kind='FREE_TRIAL_THEN_PAID';
+  else if(/\bpay[- ]as[- ]you[- ]go\b|\bpaid by usage\b/i.test(details))kind='PAID_USAGE';
+  else if(/\bpaid\b|\bsubscription\b|\bper month\b|\bmonthly\b/i.test(details))kind='PAID_SUBSCRIPTION';
  }
- let status='unknown',label='Pricing varies',plans=false;
- if(hasFree===true){status='free';label='Free';plans=kind!=='FREE_ONLY'&&(kind==='FREEMIUM'||kind==='FREE_WITH_LIMITS'||/\bpaid plans?\b|\bplans available\b|\bupgrade\b|\bpremium\b/i.test(details))}
- else if(kind==='FREE_TRIAL_THEN_PAID'){status='trial';label='Free trial';plans=true}
- else if(hasFree===false||kind.startsWith('PAID_')){status='paid';label='Paid'}
- else if(kind==='FREE_ONLY'){status='free';label='Free'}
- return{status:status,label:label,plans:plans,hasFree:hasFree,monthly:tool.monthlyPriceUsd,details:details};
+ let status='unknown',label='Pricing unverified',plans=false,hasFree=tool.hasFreePlan;
+ if(kind==='FREE_ONLY'){status='free';label='Completely free';hasFree=true}
+ else if(kind==='FREE_WITH_LIMITS'){status='limited';label='Free with limits';hasFree=true;plans=true}
+ else if(kind==='FREEMIUM'){status='freemium';label='Freemium';hasFree=true;plans=true}
+ else if(kind==='FREE_TRIAL_THEN_PAID'){status='trial';label='Free trial, then paid';hasFree=false;plans=true}
+ else if(kind==='PAID_USAGE'){status='paid';label='Paid by usage';hasFree=false}
+ else if(kind==='PAID_SUBSCRIPTION'){status='paid';label='Paid subscription';hasFree=false}
+ else if(hasFree===true){status='freemium';label='Free plan (limits unverified)';plans=true;kind='FREEMIUM'}
+ else if(hasFree===false){status='paid';label='No free plan reported';kind='PAID_SUBSCRIPTION'}
+ return{kind:kind,status:status,label:label,plans:plans,hasFree:hasFree,monthly:tool.monthlyPriceUsd,details:details};
 }
 function findMatchesBudget(tool){
  const selected=budget(),price=findPricing(tool);
- if(selected.includes('free only'))return price.hasFree===true;
- if(selected.includes('under $20'))return price.hasFree===true||(typeof price.monthly==='number'&&price.monthly>=0&&price.monthly<20);
+ if(selected.includes('free only'))return price.kind==='FREE_ONLY';
+ if(selected.includes('under $20'))return ['FREE_ONLY','FREE_WITH_LIMITS','FREEMIUM'].includes(price.kind)||(typeof price.monthly==='number'&&price.monthly>=0&&price.monthly<20);
  return true;
 }
-const brandDomains={'runway':'runwayml.com','runway ai':'runwayml.com','pika':'pika.art','pika labs':'pika.art','kling ai':'klingai.com','kling':'klingai.com','luma ai':'lumalabs.ai','luma dream machine':'lumalabs.ai','synthesia':'synthesia.io','heygen':'heygen.com','invideo ai':'invideo.io','kaiber':'kaiber.ai','pictory':'pictory.ai','lumen5':'lumen5.com','hailuo ai':'hailuoai.video','pixverse':'pixverse.ai','leonardo ai':'leonardo.ai','adobe firefly':'adobe.com','sora':'openai.com','veo':'deepmind.google','midjourney':'midjourney.com','capcut':'capcut.com','davinci resolve':'blackmagicdesign.com','blackmagic design':'blackmagicdesign.com','adobe premiere pro':'adobe.com','premiere pro':'adobe.com','adobe photoshop':'adobe.com','canva':'canva.com','gimp':'gimp.org','final cut pro':'apple.com','descript':'descript.com','audacity':'audacityteam.org','shotcut':'shotcut.org','clipchamp':'clipchamp.com','veed':'veed.io','grammarly':'grammarly.com','chatgpt':'chatgpt.com','github copilot':'github.com','runway':'runwayml.com','invideo':'invideo.io','filmora':'filmora.wondershare.com','obs studio':'obsproject.com','kdenlive':'kdenlive.org','figma':'figma.com','notion':'notion.so','openai':'openai.com','gemini':'gemini.google.com','claude':'claude.ai','vegas pro':'vegascreativesoftware.com'};
+const brandDomains={'runway':'runwayml.com','runway ai':'runwayml.com','pika':'pika.art','pika labs':'pika.art','kling ai':'klingai.com','kling':'klingai.com','luma ai':'lumalabs.ai','luma dream machine':'lumalabs.ai','synthesia':'synthesia.io','heygen':'heygen.com','deepbrain ai':'deepbrain.io','vn video editor':'vlognow.me','vn':'vlognow.me','invideo ai':'invideo.io','kaiber':'kaiber.ai','pictory':'pictory.ai','lumen5':'lumen5.com','hailuo ai':'hailuoai.video','pixverse':'pixverse.ai','leonardo ai':'leonardo.ai','adobe firefly':'adobe.com','sora':'openai.com','veo':'deepmind.google','midjourney':'midjourney.com','capcut':'capcut.com','davinci resolve':'blackmagicdesign.com','blackmagic design':'blackmagicdesign.com','adobe premiere pro':'adobe.com','premiere pro':'adobe.com','adobe photoshop':'adobe.com','canva':'canva.com','gimp':'gimp.org','final cut pro':'apple.com','descript':'descript.com','audacity':'audacityteam.org','shotcut':'shotcut.org','clipchamp':'clipchamp.com','veed':'veed.io','grammarly':'grammarly.com','chatgpt':'chatgpt.com','github copilot':'github.com','runway':'runwayml.com','invideo':'invideo.io','filmora':'filmora.wondershare.com','obs studio':'obsproject.com','kdenlive':'kdenlive.org','figma':'figma.com','notion':'notion.so','openai':'openai.com','gemini':'gemini.google.com','claude':'claude.ai','vegas pro':'vegascreativesoftware.com'};
 function domainForTool(tool){
  const name=tool.name.toLowerCase().trim();
  for(const key of Object.keys(brandDomains))if(name===key||name.startsWith(key+' '))return brandDomains[key];
@@ -123,7 +125,7 @@ function makeFindCard(tool){
  const footer=el('div',null,'d18-find-footer'),tags=el('div',null,'d18-find-tags'),status=el('span',price.label,'d18-find-tag');status.dataset.kind=price.status;tags.append(status);
  if(price.plans){const plans=el('span','Plans available','d18-find-tag');plans.dataset.kind='plans';tags.append(plans)}
  footer.append(tags);
- const officialUrl=/^https?:\/\//i.test(tool.url)?tool.url:(domain?'https://'+domain:'');
+ const officialUrl=domain?'https://'+domain:(/^https:\/\//i.test(tool.url)?tool.url:'');
  if(officialUrl){const link=el('a','Visit site ↗','d18-visit');link.href=officialUrl;link.target='_blank';link.rel='noopener noreferrer';footer.append(link)}
  card.append(footer);
  if(typeof price.monthly==='number'&&price.monthly>0)card.append(el('div','Starting price: USD '+price.monthly.toFixed(2).replace(/\.00$/,'')+' per month','d18-find-price-note'));
@@ -177,7 +179,8 @@ function looksLikeProductName(value){
  const name=String(value||'').trim();if(name.length<2||name.length>64)return false;
  if(/^(purpose|features?|pros? and cons?|workflow|step\s*\d+|tools?|ai tools?|recommended tools?|recommended ai tools|tool recommendations?|conclusion|summary|research|pricing|comparison|product recommendations?)$/i.test(name))return false;
  if(/^(?:ai )?tools? for .+$/i.test(name))return false;
- if(/\b(vs\.?|versus|compare|comparison|length\s*(?:&|and)\s*style|human[- ]like presenters?|narrated(?:\/| or )presenter[- ]style videos?|presenter[- ]style videos?|automation\s*(?:&|and|vs\.?|versus)\s*manual control|project management software|document editors?|whiteboarding tools?|pricing comparison|top tools|best tools|tool categories|bulk personalization|commercial licensing|data privacy|gpu requirements?|full control|resolution\s*(?:&|and)\s*export limits?|turn existing text|subscription|workflow phase)\b/i.test(name))return false;
+ if(/^(?:define|consider|check|choose|focus on|look for|decide on|ensure|review|evaluate|compare|understand|plan|create|select)\b/i.test(name))return false;
+ if(/\b(vs\.?|versus|compare|comparison|length\s*(?:&|and)\s*style|human[- ]like presenters?|narrated(?:\/| or )presenter[- ]style videos?|presenter[- ]style videos?|automation\s*(?:&|and|vs\.?|versus)\s*manual control|project management software|document editors?|whiteboarding tools?|pricing comparison|top tools|best tools|tool categories|bulk personalization|commercial licensing|data[- ]privacy(?: needs)?|workflow integration|no subscription|full control|gpu requirements?|full control|resolution\s*(?:&|and)\s*export limits?|turn existing text|subscription|workflow phase)\b/i.test(name))return false;
  if(name.split(/\s+/).length>7)return false;
  return true
 }
@@ -229,7 +232,7 @@ async function run(mode,prompt,sessionId){
  const out=$('#out');out.replaceChildren(el('div',mode==='workflow'?'Building your workflow and choosing useful tools…':'Finding relevant AI tools…','d18-loading'));
  const category=$('#cats .on'),budgetNode=$('.opts .ch[data-g="b"].on');let responseSessionId=null;
  try{
-  const response=await fetch(base+'/api/ai/radar',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token()},body:JSON.stringify({prompt:prompt,mode:mode,category:category?category.textContent.trim():'',budget:budgetNode?budgetNode.textContent.trim():'Any price',sessionId:sessionId||activeRadarSessionId||null})});
+  const response=await fetch(base+'/api/ai/radar',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token()},body:JSON.stringify({prompt:prompt,mode:mode,category:category?category.textContent.trim():'',budget:budgetNode?budgetNode.textContent.trim():'Any price',sessionId:sessionId||activeRadarSessionId||null}),signal:(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function'?AbortSignal.timeout(120000):undefined)});
   const raw=await response.text();let payload={};try{payload=raw?JSON.parse(raw):{}}catch(_){payload={message:raw}};
   responseSessionId=payload.sessionId||null;if(responseSessionId)setActiveRadarSession(responseSessionId);
   if(!response.ok){document.dispatchEvent(new Event('dataguard:radar-history-updated'));throw Error(payload.message||payload.error||('AI Radar request failed ('+response.status+').'))}
@@ -245,7 +248,7 @@ async function run(mode,prompt,sessionId){
  }catch(error){
   if(responseSessionId)setActiveRadarSession(responseSessionId);
   await loadActiveRadarHistory();
-  out.replaceChildren(el(error.message||'AI Radar could not complete this request.','d18-error'));
+  out.replaceChildren(el(error.name==='TimeoutError'||error.name==='AbortError'?'AI Radar took longer than two minutes. Check the backend provider logs/quota and retry; the session will remain in history.':(error.message||'AI Radar could not complete this request.'),'d18-error'));
   if(activeRadarTranscript.length>2)prependConversationHistory(out,activeRadarTranscript);
   document.dispatchEvent(new Event('dataguard:radar-history-updated'))
  }
@@ -264,7 +267,7 @@ async function openHistory(id){
   if(!saved)throw Error('The saved AI response is not structured. Start a new request to regenerate it.');
   const mode=saved.radarMode||((Array.isArray(saved.steps)||Array.isArray(saved.workflow))?'workflow':'find');lastMode=mode;
   if($('#pf'))$('#pf').hidden=mode!=='find';if($('#pw'))$('#pw').hidden=mode!=='workflow';
-  $('.seg button[data-m]').forEach(b=>b.classList.toggle('on',b.dataset.m===mode||(mode==='workflow'&&b.dataset.m==='flow')));
+  $$('.seg button[data-m]').forEach(b=>b.classList.toggle('on',b.dataset.m===mode||(mode==='workflow'&&b.dataset.m==='flow')));
   if(saved.error){out.replaceChildren(el(saved.message||'This Radar request did not complete. You can retry it using the prompt above.','d18-error'));prependConversationHistory(out,messages);return}
   lastResult=saved;
   if(mode==='workflow'){if(!Array.isArray(saved.steps)&&Array.isArray(saved.workflow))saved.steps=saved.workflow;renderWorkflow(saved)}else renderTools(saved,true);
