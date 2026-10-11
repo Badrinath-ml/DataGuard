@@ -370,7 +370,7 @@ public class AIChatController {
                         Return a corrected JSON object for the same goal. Include the required number of complete steps and/or actual named software products.
                         Do not include prose outside JSON. Do not invent prices or URLs.
                         """));
-                String repairedReply = provider.completeJson(repairTurns);
+                String repairedReply = provider.completeJsonFallback(repairTurns);
                 structured = radarNormalizer.normalize(parseJsonWithFallback(repairedReply), mode, prompt);
             }
 
