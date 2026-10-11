@@ -13,7 +13,7 @@ const dateOf = r => r?.reviewDate || r?.createdAt;
 export default function CodeCheck() {
  const navigate=useNavigate(), fileRef=useRef(null), chatRef=useRef(null), user=auth();
  const [reviews,setReviews]=useState([]),[selected,setSelected]=useState(null),[sessions,setSessions]=useState([]),[chatSession,setChatSession]=useState(null),[messages,setMessages]=useState([]);
- const [query,setQuery]=useState(''),[input,setInput]=useState(''),[busy,setBusy]=useState(false),[chatBusy,setChatBusy]=useState(false),[error,setError]=useState(''),[fix,setFix]=useState(null),[dark,setDark]=useState(false),[assistantOpen,setAssistantOpen]=useState(false),[assistantSession,setAssistantSession]=useState(null),[assistantMessages,setAssistantMessages]=useState([]),[assistantInput,setAssistantInput]=useState(''),[assistantBusy,setAssistantBusy]=useState(false);
+ const [query,setQuery]=useState(''),[input,setInput]=useState(''),[chatExpanded,setChatExpanded]=useState(false),[busy,setBusy]=useState(false),[chatBusy,setChatBusy]=useState(false),[error,setError]=useState(''),[fix,setFix]=useState(null),[dark,setDark]=useState(false),[assistantOpen,setAssistantOpen]=useState(false),[assistantSession,setAssistantSession]=useState(null),[assistantMessages,setAssistantMessages]=useState([]),[assistantInput,setAssistantInput]=useState(''),[assistantBusy,setAssistantBusy]=useState(false);
  async function refresh(){
   let reviewError='';
   try { const data=await getReviews(); setReviews(Array.isArray(data)?data:[]); }
