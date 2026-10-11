@@ -38,6 +38,21 @@ if (html.split('\n').some((line) => line.trim() === 'run();')) {
   throw new Error('The legacy demo scan must not run automatically on page load.');
 }
 
+const externalScripts = [
+  '../public/dataguard-ai-radar.js',
+  '../public/dataguard-chat-workspace.js',
+  '../public/dataguard-functional-fixes.js',
+  '../public/dataguard-followup-fixes.js',
+  '../public/dataguard-pr17-fixes.js',
+].map((path) => ({ path, code: readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8') }));
+for (const script of externalScripts) {
+  try {
+    new Function(script.code);
+  } catch (error) {
+    throw new Error('External script ' + script.path + ' failed syntax validation: ' + error.message);
+  }
+}
+
 const radar = readFileSync(fileURLToPath(new URL('../public/dataguard-ai-radar.js', import.meta.url)), 'utf8');
 const legacyRadarScripts = [
   '../public/dataguard-functional-fixes.js',
@@ -64,6 +79,12 @@ if (!radar.includes("label='Completely free'") || !radar.includes("label='Freemi
 }
 if (!html.includes("dataguard-chat-session:") || !html.includes("body: JSON.stringify({ title: 'AI Assistant' })")) {
   throw new Error('The AI assistant must create and restore a persistent authenticated chat session.');
+}
+if (!html.includes("loadChatHistory();") || !html.includes("chatHistory = []; chatSessionId = null; msgs.replaceChildren();")) {
+  throw new Error('Authentication must restore chat history and clear it when the account changes or signs out.');
+}
+if (!workspace.includes("dataguard:radar-signed-out") || !workspace.includes("Saved sessions could not be loaded.")) {
+  throw new Error('The history sidebar must clear account state on sign-out and explain session-load failures.');
 }
 
 console.log('Validated ' + inlineScripts.length + ' inline scripts, auth wiring, single Radar controller, and independent history loading.');
