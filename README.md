@@ -21,6 +21,7 @@ Set `JWT_SECRET` to a private random value with at least 32 UTF-8 bytes. Set `GR
 
 The backend intentionally fails to start if Aiven connection settings are missing or invalid; this avoids silently saving accounts into a temporary in-memory database.
 The backend also validates `JWT_SECRET` at startup. Flyway applies the versioned PostgreSQL schema migration before Hibernate validates the entities; Hibernate no longer changes the production schema automatically. `/api/health` is a public, non-sensitive health check that returns `UP` only when PostgreSQL responds to `SELECT 1`.
+Before the first rollout to an existing Aiven database, take a database backup and deploy to a staging database if available. The baseline migration is additive and does not drop data, but unique-index creation can correctly fail if legacy duplicate emails or session IDs exist; inspect the migration error rather than bypassing Hibernate validation.
 
 For AI Radar, configure at least one backend key (`GROQ_API_KEY` and/or `GEMINI_API_KEY`). Both keys are recommended so structured-output failures can be retried with the alternate provider. Provider calls have bounded timeouts; the UI reports an error rather than waiting forever.
 
