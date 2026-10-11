@@ -157,7 +157,7 @@ class DeploymentReadinessIntegrationTest {
                 .andReturn();
         mockMvc.perform(asyncDispatch(download))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Type", "application/zip"));
+                .andExpect(header().string("Content-Type", "application/octet-stream"));
     }
 
     @Test
