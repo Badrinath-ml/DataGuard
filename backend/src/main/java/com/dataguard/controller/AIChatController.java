@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.io.IOException;
@@ -121,6 +122,17 @@ public class AIChatController {
         }
         session.setUpdatedAt(Instant.now());
         return ResponseEntity.status(HttpStatus.CREATED).body(sessionDto(sessionRepository.save(session)));
+    }
+
+    @DeleteMapping("/chat/sessions/{sessionId}")
+    @Transactional
+    public ResponseEntity<?> deleteSession(@PathVariable UUID sessionId, Authentication authentication) {
+        User user = currentUser(authentication);
+        AIConversationSession session = sessionRepository.findBySessionIdAndUser(sessionId, user).orElse(null);
+        if (session == null) return ResponseEntity.notFound().build();
+        messageRepository.deleteAll(messageRepository.findBySessionOrderByCreatedAtAsc(session));
+        sessionRepository.delete(session);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/chat/sessions")
