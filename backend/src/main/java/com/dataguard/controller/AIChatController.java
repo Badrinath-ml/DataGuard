@@ -29,9 +29,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -274,6 +276,7 @@ public class AIChatController {
             files.stream().limit(80).forEach(path ->
                     system.append("- ").append(root.relativize(path).toString().replace((char)92, '/')).append("\n"));
             List<Path> selected = new ArrayList<>();
+            Set<Path> ambiguousLegacyMatches = new HashSet<>();
             for (Finding finding : findings) {
                 if (finding.getFilePath() == null) continue;
                 String findingPath = finding.getFilePath().replace((char) 92, '/');
@@ -287,14 +290,15 @@ public class AIChatController {
                     List<Path> sameName = files.stream()
                             .filter(path -> path.getFileName().toString().equals(basename))
                             .filter(path -> !selected.contains(path)).toList();
-                    // A basename-only legacy finding is safe to resolve only when unambiguous.
+                    // A basename-only legacy finding is safe to match only when unambiguous.
                     if (sameName.size() == 1) selected.add(sameName.get(0));
+                    else if (sameName.size() > 1) ambiguousLegacyMatches.addAll(sameName);
                 }
                 if (selected.size() >= 4) break;
             }
             for (Path path : files) {
                 if (selected.size() >= 4) break;
-                if (!selected.contains(path)) selected.add(path);
+                if (!selected.contains(path) && !ambiguousLegacyMatches.contains(path)) selected.add(path);
             }
             int budget = 18_000;
             for (Path path : selected) {
