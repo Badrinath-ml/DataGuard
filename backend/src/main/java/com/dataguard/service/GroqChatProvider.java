@@ -41,7 +41,7 @@ public class GroqChatProvider implements RadarChatProvider {
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(Duration.ofSeconds(60));
+        requestFactory.setReadTimeout(Duration.ofSeconds(30));
         this.groqClient = restClientBuilder.clone().requestFactory(requestFactory).baseUrl(groqBaseUrl).build();
         this.geminiClient = restClientBuilder.clone().requestFactory(requestFactory).baseUrl(geminiBaseUrl).build();
         this.groqApiKey = groqApiKey == null ? "" : groqApiKey.trim();
