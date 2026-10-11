@@ -68,7 +68,7 @@ public class ProjectController {
 
         try {
             Review reviewResult = projectService.processProjectUpload(file, user, name.trim());
-            return ResponseEntity.ok(ReviewResponse.from(reviewResult, findingRepository.findByReviewId(reviewResult.getId())));
+            return ResponseEntity.ok(reviewResponse(reviewResult));
         } catch (ProjectService.InvalidArchiveException exception) {
             return ResponseEntity.badRequest().body(Map.of("message", exception.getMessage()));
         } catch (IOException exception) {
@@ -79,6 +79,33 @@ public class ProjectController {
                     .body(Map.of("message", exception.getMessage() == null
                             ? "The configured review engine is unavailable. Check backend logs." : exception.getMessage()));
         }
+    }
+
+
+    private ReviewResponse reviewResponse(Review review) {
+        Path root = Path.of(storageDirectory, "dataguard_" + review.getProject().getId()).toAbsolutePath().normalize();
+        int files = 0;
+        long lines = 0;
+        if (Files.isDirectory(root)) {
+            try (var paths = Files.walk(root)) {
+                List<Path> allFiles = paths.filter(Files::isRegularFile)
+                        .map(path -> path.toAbsolutePath().normalize())
+                        .filter(path -> path.startsWith(root)).toList();
+                files = allFiles.size();
+                for (Path path : allFiles) {
+                    String name = path.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+                    if (!name.matches(".*\\\\.(java|js|jsx|ts|tsx|py|html|css|json|ya?ml|xml|sql|md)$")) continue;
+                    try (var reader = Files.lines(path, StandardCharsets.UTF_8)) {
+                        lines += reader.count();
+                    } catch (IOException ignored) {
+                        // A single unreadable source file should not hide the overall review results.
+                    }
+                }
+            } catch (IOException ignored) {
+                // Keep metrics at zero when the stored review workspace is unavailable.
+            }
+        }
+        return ReviewResponse.from(review, findingRepository.findByReviewId(review.getId()), files, lines);
     }
 
     private String authenticationEmail(Authentication authentication) {
@@ -97,7 +124,7 @@ public class ProjectController {
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) return ResponseEntity.status(401).body("Please sign in again.");
         var reviews = reviewRepository.findAllForUser(user.getId()).stream()
-                .map(review -> ReviewResponse.from(review, findingRepository.findByReviewId(review.getId())))
+                .map(this::reviewResponse)
                 .toList();
         return ResponseEntity.ok(reviews);
     }
