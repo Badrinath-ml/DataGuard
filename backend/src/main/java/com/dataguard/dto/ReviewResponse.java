@@ -11,18 +11,18 @@ public record ReviewResponse(
         String projectName,
         Integer qualityScore,
         LocalDateTime reviewDate,
+        Integer fileCount,
+        Long linesOfCode,
         List<FindingResponse> findings) {
 
     public static ReviewResponse from(Review review, List<Finding> findings) {
-        List<FindingResponse> responseFindings = findings.stream()
-                .map(FindingResponse::from)
-                .toList();
-        return new ReviewResponse(
-                review.getId(),
-                review.getProject().getName(),
-                review.getQualityScore(),
-                review.getReviewDate(),
-                responseFindings);
+        return from(review, findings, null, null);
+    }
+
+    public static ReviewResponse from(Review review, List<Finding> findings, Integer fileCount, Long linesOfCode) {
+        List<FindingResponse> responseFindings = findings.stream().map(FindingResponse::from).toList();
+        return new ReviewResponse(review.getId(), review.getProject().getName(), review.getQualityScore(),
+                review.getReviewDate(), fileCount, linesOfCode, responseFindings);
     }
 
     public record FindingResponse(
