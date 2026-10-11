@@ -11,7 +11,19 @@ export default function CodeCheck() {
  const navigate=useNavigate(), fileRef=useRef(null), chatRef=useRef(null), user=auth();
  const [reviews,setReviews]=useState([]),[selected,setSelected]=useState(null),[sessions,setSessions]=useState([]),[chatSession,setChatSession]=useState(null),[messages,setMessages]=useState([]);
  const [query,setQuery]=useState(''),[input,setInput]=useState(''),[busy,setBusy]=useState(false),[chatBusy,setChatBusy]=useState(false),[error,setError]=useState(''),[fix,setFix]=useState(null),[dark,setDark]=useState(false),[assistantOpen,setAssistantOpen]=useState(false),[assistantSession,setAssistantSession]=useState(null),[assistantMessages,setAssistantMessages]=useState([]),[assistantInput,setAssistantInput]=useState(''),[assistantBusy,setAssistantBusy]=useState(false);
- async function refresh(){setError('');try{const data=await getReviews();setReviews(Array.isArray(data)?data:[]);}catch(e){setError(e.message);return;}try{const data=await getChatSessions();setSessions(Array.isArray(data)?data:[]);}catch(e){setSessions([]);setError('Review history loaded, but assistant session history could not be loaded: '+e.message);} }
+ async function refresh(){
+  let reviewError='';
+  try { const data=await getReviews(); setReviews(Array.isArray(data)?data:[]); }
+  catch(e) { reviewError=e?.message||'The review API request failed.'; }
+  try { const data=await getChatSessions(); setSessions(Array.isArray(data)?data:[]); }
+  catch(e) {
+    setSessions([]);
+    const detail=e?.message?.trim()||'The server returned an empty error response.';
+    setError('Assistant session history could not be loaded ('+detail+'). Review results remain available. Check the backend /api/ai/chat/sessions response.');
+    return;
+  }
+  setError(reviewError);
+ }
  useEffect(()=>{refresh();},[]); useEffect(()=>{if(chatRef.current)chatRef.current.scrollTop=chatRef.current.scrollHeight;},[messages]);
  const list=useMemo(()=>reviews.filter(r=>nameOf(r).toLowerCase().includes(query.toLowerCase())),[reviews,query]), findings=findingsOf(selected);
  async function upload(file){if(!file)return;if(!file.name.toLowerCase().endsWith('.zip')){setError('Choose a ZIP archive.');return;}if(file.size>25*1024*1024){setError('ZIP files must be 25 MB or smaller.');return;}setBusy(true);setError('');try{const r=await uploadProject(file.name.replace(/\.zip$/i,''),file);setReviews(old=>[r,...old.filter(x=>String(x.id)!==String(r.id))]);setSelected(r);setMessages([]);setChatSession(null);await refresh();}catch(e){setError(e.message);}finally{setBusy(false);if(fileRef.current)fileRef.current.value='';}}
