@@ -23,14 +23,17 @@ class RadarResponseNormalizerTest {
                 tool("Bulk personalization", "A workflow feature for creating multiple variants.", "UNKNOWN", null),
                 tool("Canva", "Create video designs, titles, and social graphics.", "FREEMIUM", true),
                 tool("Adobe Premiere Pro", "Edit and finish long-form video projects.", "PAID_SUBSCRIPTION", false),
-                tool("Shotcut", "Edit videos with a free open-source desktop editor.", "FREE_ONLY", true)
+                tool("Shotcut", "Edit videos with a free open-source desktop editor.", "FREE_ONLY", true),
+                tool("Descript", "Edit audio and video by editing the transcript.", "FREEMIUM", true),
+                tool("VEED", "Edit browser-based videos and add subtitles.", "FREEMIUM", true),
+                tool("Runway", "Generate and edit videos with AI-assisted tools.", "FREEMIUM", true)
         ));
 
         Map<String, Object> normalized = normalizer.normalize(input, "find", "video editing tools");
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> tools = (List<Map<String, Object>>) normalized.get("tools");
 
-        assertEquals(6, tools.size());
+        assertEquals(9, tools.size());
         assertTrue(tools.stream().anyMatch(t -> "CapCut".equals(t.get("name"))));
         assertFalse(tools.stream().anyMatch(t -> "Purpose".equals(t.get("name"))));
         assertFalse(tools.stream().anyMatch(t -> "Bulk personalization".equals(t.get("name"))));
