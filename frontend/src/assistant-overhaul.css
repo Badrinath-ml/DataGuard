@@ -26,3 +26,16 @@
 .dg-assistant-popover button:focus-visible{outline:3px solid #a994ff;outline-offset:2px;}
 @media(max-width:640px){.dg-assistant-backdrop{padding:0;align-items:stretch;}.dg-assistant-popover{width:100%;height:100dvh;max-height:100dvh;border-radius:0;border:0;}.dg-popover-head{min-height:64px;padding:12px 16px;}.dg-popover-messages{padding:16px 12px;}.dg-popover-messages .dg-message{max-width:94%;padding:13px 14px;}.dg-assistant-welcome{margin:8vh auto 20px;padding:0 8px;}.dg-assistant-suggestions{display:grid;grid-template-columns:1fr;}.dg-assistant-suggestions button{width:100%;text-align:left;}.dg-assistant-popover .dg-chat-form{padding:12px;gap:8px;}.dg-assistant-popover .dg-chat-form input{min-width:0;}.dg-assistant-disclaimer{padding-bottom:max(12px,env(safe-area-inset-bottom));}}
 @media(prefers-reduced-motion:reduce){.dg-assistant-backdrop *{scroll-behavior:auto!important;animation:none!important;transition:none!important;}}
+
+/* Keep the assistant readable when the workspace is in dark mode. */
+.dg-dark .dg-assistant-popover{background:#211b38;color:#f2efff;border-color:#40375f;}
+.dg-dark .dg-popover-head,.dg-dark .dg-assistant-popover .dg-chat-form,.dg-dark .dg-assistant-disclaimer{background:#211b38;border-color:#40375f;color:#b7b1d5;}
+.dg-dark .dg-popover-messages{background:radial-gradient(ellipse at top,#292247 0%,#211b38 62%);}
+.dg-dark .dg-popover-head button,.dg-dark .dg-assistant-suggestions button,.dg-dark .dg-assistant-thinking{background:#2d2650;border-color:#40375f;color:#e5dfff;}
+.dg-dark .dg-popover-messages .dg-message{background:#2d2650;border-color:#40375f;}
+.dg-dark .dg-popover-messages .dg-message.user{background:#403568;border-color:#6655a5;}
+.dg-dark .dg-popover-messages .dg-message p,.dg-dark .dg-assistant-welcome h2{color:#f2efff;}
+.dg-dark .dg-assistant-welcome>p{color:#b7b1d5;}
+.dg-dark .dg-assistant-welcome-icon{background:#2d2650;color:#c7b8ff;}
+.dg-dark .dg-assistant-popover .dg-chat-form input{background:#2d2650;border-color:#40375f;color:#f2efff;}
+.dg-dark .dg-assistant-popover .dg-chat-form input::placeholder{color:#9a95bd;}
